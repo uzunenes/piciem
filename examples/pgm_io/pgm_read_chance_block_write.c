@@ -59,7 +59,7 @@ int main(int argc, char **argv)
     if( pgm_write(&pgm, out_file_name) != 0 )
     {
         printf("%s(): Exiting .. \n", __func__);
-        return -1;;
+        return -2;
     }
     printf("%s(): Saved pgm file: [%s]\n", __func__, out_file_name);
     // -------------------------------------------

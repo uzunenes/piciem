@@ -6,28 +6,28 @@ extern "C"
 {
 #endif
 
-    struct image_s
+    typedef struct
     {
         int w;
         int h;
         unsigned char* data;
-    };
+    } image_t;
 
-    struct pgm_s
+    typedef struct
     {
         char magic_number[2 + 1];
         char comment[2048];
         int max_val;
         struct image_s im;
-    };
+    } pgm_t;
 
-    void image_destroy(struct image_s* im);
+    void image_destroy(image_t* im);
 
-    int pgm_read(const char* file_name, struct pgm_s* pgm);
+    int pgm_read(const char* file_name, pgm_t* pgm);
 
-    int pgm_write(const struct pgm_s* pgm, const char* file_name);
+    int pgm_write(const pgm_t* pgm, const char* file_name);
 
-    void pgm_destroy(struct pgm_s* pgm);
+    void pgm_destroy(pgm_t* pgm);
 
 #ifdef __cplusplus
 }

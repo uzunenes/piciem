@@ -5,7 +5,7 @@
 /*
 * destroy image data
 */
-void image_destroy(struct image_s* im)
+void image_destroy(image_t* im)
 {
     free(im->data);
     im->data = NULL;

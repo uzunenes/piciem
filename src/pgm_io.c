@@ -9,17 +9,13 @@
 /*
 * read pgm file to pgm struct (P5 binary format)
 */
-int pgm_read(const char* file_name, struct pgm_s* pgm)
+int pgm_read(const char* file_name, pgm_t* pgm)
 {
-    char buffer[64];
-    char c;
-
-
     // ------   open file read and binary mode  -------------
     FILE* file_ptr = fopen(file_name, "rb");
     if( file_ptr == NULL )
     {
-        printf("%s(): Error opening file: [%s] . \n", __func__, file_name);
+        printf("%s(): Error opening file: [%s]. \n", __func__, file_name);
         return -1;
     }
     // ------------------------------------------------------
@@ -40,11 +36,11 @@ int pgm_read(const char* file_name, struct pgm_s* pgm)
 
     if( strcmp(pgm->magic_number, default_read_type) != 0 )
     {
-        printf("%s(): image type: [%s], type must be: [%s] . \n", __func__, pgm->magic_number, default_read_type);
+        printf("%s(): image type: [%s], type must be: [%s]. \n", __func__, pgm->magic_number, default_read_type);
         fclose(file_ptr);
         return -3;
     }
-    printf("%s(): magic number: [%s] . \n", __func__, pgm->magic_number);
+    printf("%s(): magic number: [%s]. \n", __func__, pgm->magic_number);
     // --------------------------------------------------------
 
 
@@ -84,17 +80,19 @@ int pgm_read(const char* file_name, struct pgm_s* pgm)
         ++comment_array_location;
     }
 
-    printf("%s(): comment: [%s] . \n", __func__, pgm->comment);
+    printf("%s(): comment: [%s]. \n", __func__, pgm->comment);
     // -------------------------------------------------------
 
 
     // --------------   read height && weight   ------------------------
+    char buffer[64];
+    char c = 0;
     int array_location = 0;
 
     while( 1 )
     {
         c = fgetc(file_ptr);
-
+        
         if( c == '\n' ) // end
         {
             buffer[array_location] = '\0';
@@ -112,7 +110,7 @@ int pgm_read(const char* file_name, struct pgm_s* pgm)
         ++array_location;
     }
 
-    printf("%s(): height: [%d] , weight: [%d] . \n", __func__, pgm->im.h, pgm->im.w);
+    printf("%s(): height: [%d] , weight: [%d]. \n", __func__, pgm->im.h, pgm->im.w);
     // -------------------------------------------------------
 
 
@@ -136,7 +134,7 @@ int pgm_read(const char* file_name, struct pgm_s* pgm)
     const int max_value_L = 255;
     if( pgm->max_val != max_value_L )
     {
-        printf("%s(): max_val: [%d] max_value_L: [%d] \n", __func__, pgm->max_val, max_value_L);
+        printf("%s(): max_val: [%d] max_value_L: [%d]. \n", __func__, pgm->max_val, max_value_L);
         return -4;
     }
 
@@ -145,9 +143,9 @@ int pgm_read(const char* file_name, struct pgm_s* pgm)
 
 
     // ---  read data   ---------------------------------------
-    pgm->im.data = (unsigned char*)malloc(pgm->im.w * pgm->im.h * sizeof(unsigned char));
+    pgm->im.data = (unsigned char*)calloc(pgm->im.w * pgm->im.h, sizeof(unsigned char));
+    
     unsigned char* data = pgm->im.data;
-
     int len = 0;
     while( 1 )
     {
@@ -171,13 +169,13 @@ int pgm_read(const char* file_name, struct pgm_s* pgm)
 /*
 * write pgm struct data to file (P5 binary format)
 */
-int pgm_write(const struct pgm_s* pgm, const char* file_name)
+int pgm_write(const pgm_t* pgm, const char* file_name)
 {
     // -------  check type  ---------------------------------
-    const char *default_read_type = "P5";
+    const char* default_read_type = "P5";
     if( strcmp(pgm->magic_number, default_read_type) != 0 )
     {
-        printf("%s(): image magic number: [%s] not supporting, type must be: [%s] format . \n", __func__, pgm->magic_number, default_read_type);
+        printf("%s(): Image magic number: [%s] not supporting, type must be: [%s] format. \n", __func__, pgm->magic_number, default_read_type);
         return -1;
     }
     // -------------------------------------------------------
@@ -187,7 +185,7 @@ int pgm_write(const struct pgm_s* pgm, const char* file_name)
     FILE* file_ptr = fopen(file_name, "wb");
     if( file_ptr == NULL )
     {
-        printf("%s(): Error opening file: [%s] . \n", __func__, file_name);
+        printf("%s(): Error opening file: [%s]. \n", __func__, file_name);
         return -2;
     }
     // -------------------------------------------------------
@@ -198,7 +196,7 @@ int pgm_write(const struct pgm_s* pgm, const char* file_name)
     // -------------------------------------------------------
 
 
-    // ------   write unsigned char data  --------------------
+    // ------   write image data  --------------------
     int rows = pgm->im.h;
     int cols = pgm->im.w;
     int data_len = rows * cols;
@@ -216,7 +214,7 @@ int pgm_write(const struct pgm_s* pgm, const char* file_name)
 /*
 * destroy pgm data
 */
-void pgm_destroy(struct pgm_s* pgm)
+void pgm_destroy(pgm_t* pgm)
 {
     image_destroy(&pgm->im);
 }

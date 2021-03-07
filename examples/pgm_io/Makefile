@@ -11,4 +11,4 @@ $(example_name).o: $(example_name).c
 
 
 clean:
-	rm *.o *.out
+	rm -f *.o *.out

@@ -6,28 +6,33 @@ extern "C"
 {
 #endif
 
+	typedef enum
+	{
+		LPGM_OK = 0,
+		LPGM_FAIL = -1
+	} lpgm_status_t;
+
     typedef struct
     {
-        int w;
-        int h;
-        unsigned char* data;
-    } image_t;
+        int w, h;
+        float* data;
+    } lpgm_image_t;
 
     typedef struct
     {
         char magic_number[2 + 1];
-        char comment[2048];
+        char* comment;
         int max_val;
-        struct image_s im;
-    } pgm_t;
+        lpgm_image_t im;
+    } lpgm_t;
 
-    void image_destroy(image_t* im);
+    lpgm_status_t pgm_read(const char* file_name, lpgm_t* pgm);
 
-    int pgm_read(const char* file_name, pgm_t* pgm);
+    lpgm_status_t pgm_write(const lpgm_t* pgm, const char* file_name);
 
-    int pgm_write(const pgm_t* pgm, const char* file_name);
+    void pgm_destroy(lpgm_t* pgm);
 
-    void pgm_destroy(pgm_t* pgm);
+	void image_destroy(lpgm_image_t* im);
 
 #ifdef __cplusplus
 }

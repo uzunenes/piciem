@@ -14,7 +14,7 @@ struct block_s
     struct point_s point[2];
 };
 
-void change_image_block_pixel_value(struct pgm_s* pgm, struct block_s block, int new_value);
+void change_image_block_pixel_value(lpgm_t* pgm, struct block_s block, float new_value);
 // ---------------------------------------------------------------
 
 
@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     // ------  chechk input parameter    ---------
     if (argc != 2)
     {
-        printf("%s(): Usage: [./pgm_read_chance_block_write.out image_file.pgm] \n", __func__);
+        fprintf(stderr, "%s(): Usage: [./pgm_read_chance_block_write.out image_file.pgm] \n", __func__);
         return -1;
     }
     // -------------------------------------------
@@ -31,13 +31,13 @@ int main(int argc, char **argv)
 
     // ------   read file   ----------------------
     const char *file_name = argv[1];
-    printf("%s(): Reading pgm file: [%s] \n", __func__, file_name);
+    fprintf(stderr, "%s(): Reading pgm file: [%s] \n", __func__, file_name);
 
-    struct pgm_s pgm;
+    lpgm_t pgm;
     if( pgm_read(file_name, &pgm) != 0 )
     {
-        printf("%s(): Exiting .. \n", __func__);
-        return -1;;
+        fprintf(stderr, "%s(): Exiting .. \n", __func__);
+        return -1;
     }
     // -------------------------------------------
 
@@ -58,10 +58,10 @@ int main(int argc, char **argv)
     const char* out_file_name = "output.pgm";
     if( pgm_write(&pgm, out_file_name) != 0 )
     {
-        printf("%s(): Exiting .. \n", __func__);
-        return -2;
+        fprintf(stderr, "%s(): Exiting .. \n", __func__);
+        return -1;
     }
-    printf("%s(): Saved pgm file: [%s]\n", __func__, out_file_name);
+    fprintf(stdout, "%s(): Saved pgm file: [%s]\n", __func__, out_file_name);
     // -------------------------------------------
 
     
@@ -70,11 +70,11 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void change_image_block_pixel_value(struct pgm_s* pgm, struct block_s block, int new_value)
+void change_image_block_pixel_value(lpgm_t* pgm, struct block_s block, float new_value)
 {
     int rows = pgm->im.w;
     int cols = pgm->im.h;
-    unsigned char* data_ptr = pgm->im.data;
+    float* data_ptr = pgm->im.data;
 
     for( int i = 0; i < rows; ++i )
     {

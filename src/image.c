@@ -75,3 +75,26 @@ lpgm_image_t copy_image(const lpgm_image_t* input_im)
 
     return out_im;
 }
+
+lpgm_image_t border_image(const lpgm_image_t* input_im, int border_size)
+{
+	int i, j;
+	int new_image_rows, new_image_cols;
+	unsigned char val;
+	lpgm_image_t out_im;
+	
+	out_im = make_empty_image(input_im->w + 2 * border_size, input_im->h + 2 * border_size);
+	out_im_rows = out_im.h;
+	out_im_cols = out_im.w;
+
+	for( i = 0; i < out_im_rows; ++i )
+	{
+		for( j = 0; j < out_im_cols; ++j )
+		{
+			val = get_pixel_extend_value(input_im, i - border_size, j - border_size);
+			set_pixel_value(&out_im, i, j, val);
+		}
+	}
+
+	return out_im;
+}

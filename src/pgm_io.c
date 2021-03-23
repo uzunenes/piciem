@@ -4,46 +4,42 @@
 
 #include "../include/libpgm.h"
 
-lpgm_status_t
-pgm_read(const char* file_name, lpgm_t* pgm)
+static int
+read_magic_number(FILE* file_ptr, lpgm_t* pgm)
 {
-	// ------   open file read and binary mode  -------------
-	FILE* file_ptr = fopen(file_name, "rb");
-	if (file_ptr == NULL)
-	{
-		fprintf(stderr, "%s(): Error opening file: [%s]. \n", __func__, file_name);
-		return LPGM_FAIL;
-	}
-	// ------------------------------------------------------
+	const char* default_read_type = "P5";
 
-	// -----------  read magic number   ---------------------
 	pgm->magic_number[0] = fgetc(file_ptr);
 	pgm->magic_number[1] = fgetc(file_ptr);
 	if (fgetc(file_ptr) != '\n') // end line magic number
 	{
 		fprintf(stderr, "%s(): Magic number len must be 2 character. \n", __func__);
-		fclose(file_ptr);
-		return LPGM_FAIL;
+		return -1;
 	}
 	pgm->magic_number[2] = '\0';
 
-	const char* default_read_type = "P5";
 	if (strcmp(pgm->magic_number, default_read_type) != 0)
 	{
 		fprintf(stderr, "%s(): Your image type: [%s], type must be: [%s]. \n", __func__, pgm->magic_number, default_read_type);
-		fclose(file_ptr);
-		return LPGM_FAIL;
+		return -1;
 	}
 	fprintf(stdout, "%s(): Magic number: [%s]. \n", __func__, pgm->magic_number);
-	// --------------------------------------------------------
 
-	// --------------   read comments   -----------------------
-	int comment_array_location = 0;
-	int start_line_flag = 1;
+	return 0;
+}
+
+static int
+read_comments(FILE* file_ptr, lpgm_t* pgm)
+{
+	char c;
+	int comment_array_location, start_line_flag;
+
 	pgm->comment = NULL;
+	comment_array_location = 0;
+	start_line_flag = 1;
 	while (1)
 	{
-		char c = fgetc(file_ptr);
+		c = fgetc(file_ptr);
 
 		if (start_line_flag == 1 && c != '#') // end comments || no comments
 		{
@@ -75,19 +71,26 @@ pgm_read(const char* file_name, lpgm_t* pgm)
 		pgm->comment = realloc(pgm->comment, (comment_array_location + 1) * sizeof(char));
 		pgm->comment[comment_array_location++] = c;
 	}
+
 	if (pgm->comment != NULL)
 	{
 		fprintf(stdout, "%s(): Comment: [%s]. \n", __func__, pgm->comment);
 	}
-	// -------------------------------------------------------
 
-	// --------------   read height && weight   ------------------------
+	return 0;
+}
+
+static int
+read_height_and_weight(FILE* file_ptr, lpgm_t* pgm)
+{
+	char c;
 	char buffer[64];
-	int array_location = 0;
+	int array_location;
 
+	array_location = 0;
 	while (1)
 	{
-		char c = fgetc(file_ptr);
+		c = fgetc(file_ptr);
 
 		if (c == '\n') // end
 		{
@@ -106,13 +109,22 @@ pgm_read(const char* file_name, lpgm_t* pgm)
 		++array_location;
 	}
 	fprintf(stdout, "%s(): Height: [%d] , weight: [%d]. \n", __func__, pgm->im.h, pgm->im.w);
-	// -------------------------------------------------------
 
-	// ---------------- max pixel value read ---------------
+	return 0;
+}
+
+static int
+read_max_pixel_value(FILE* file_ptr, lpgm_t* pgm)
+{
+	char c;
+	int array_location;
+	char buffer[64];
+	const int max_value_L = 255;
+
 	array_location = 0;
 	while (1)
 	{
-		char c = fgetc(file_ptr);
+		c = fgetc(file_ptr);
 
 		if (c == '\n') // end
 		{
@@ -125,20 +137,26 @@ pgm_read(const char* file_name, lpgm_t* pgm)
 		++array_location;
 	}
 
-	const int max_value_L = 255;
 	if (pgm->max_val != max_value_L)
 	{
 		fprintf(stderr, "%s(): Max_val: [%d] max_value_L: [%d]. \n", __func__, pgm->max_val, max_value_L);
-		return LPGM_FAIL;
+		return -1;
 	}
 	fprintf(stdout, "%s(): Max_val: [%d] \n", __func__, pgm->max_val);
-	// -------------------------------------------------------
 
-	// ---  read data   ---------------------------------------
+	return 0;
+}
+
+static int
+read_pixel_data(FILE* file_ptr, lpgm_t* pgm)
+{
+	int len;
+	float* data;
+
 	pgm->im.data = (float*)calloc(pgm->im.w * pgm->im.h, sizeof(float));
 
-	float* data = pgm->im.data;
-	int len = 0;
+	data = pgm->im.data;
+	len = 0;
 	while (1)
 	{
 		*data = (float)fgetc(file_ptr);
@@ -151,8 +169,59 @@ pgm_read(const char* file_name, lpgm_t* pgm)
 		}
 	}
 	fprintf(stdout, "%s(): Readed [%d] pixels from file. \n", __func__, len);
-	// ---------------------------------------------------------
 
+	return 0;
+}
+
+lpgm_status_t
+lpgm_file_read(const char* file_name, lpgm_t* pgm)
+{
+	FILE* file_ptr;
+
+	// open file read and binary mode
+	file_ptr = fopen(file_name, "rb");
+	if (file_ptr == NULL)
+	{
+		fprintf(stderr, "%s(): Error opening file: [%s]. \n", __func__, file_name);
+		return LPGM_FAIL;
+	}
+
+	if (read_magic_number(file_ptr, pgm) != 0)
+	{
+		fprintf(stderr, "%s(): Error reading magic number from file: [%s]. \n", __func__, file_name);
+		fclose(file_ptr);
+		return LPGM_FAIL;
+	}
+
+	if (read_comments(file_ptr, pgm) != 0)
+	{
+		fprintf(stderr, "%s(): Error reading comments from file: [%s]. \n", __func__, file_name);
+		fclose(file_ptr);
+		return LPGM_FAIL;
+	}
+
+	if (read_height_and_weight(file_ptr, pgm) != 0)
+	{
+		fprintf(stderr, "%s(): Error reading height and weight from file: [%s]. \n", __func__, file_name);
+		fclose(file_ptr);
+		return LPGM_FAIL;
+	}
+
+	if (read_max_pixel_value(file_ptr, pgm) != 0)
+	{
+		fprintf(stderr, "%s(): Error reading max pixel value from file: [%s]. \n", __func__, file_name);
+		fclose(file_ptr);
+		return LPGM_FAIL;
+	}
+
+	if (read_pixel_data(file_ptr, pgm) != 0)
+	{
+		fprintf(stderr, "%s(): Error reading pixel data from file: [%s]. \n", __func__, file_name);
+		fclose(file_ptr);
+		return LPGM_FAIL;
+	}
+
+	// close file
 	fclose(file_ptr);
 
 	return LPGM_OK;
@@ -162,32 +231,29 @@ pgm_read(const char* file_name, lpgm_t* pgm)
  * write pgm struct data to file (P5 binary format)
  */
 lpgm_status_t
-pgm_write(const lpgm_t* pgm, const char* file_name)
+lpgm_file_write(const lpgm_t* pgm, const char* file_name)
 {
-	// -------  check type  ---------------------------------
+	FILE* file_ptr;
+	unsigned char c;
+	int i;
 	const char* default_read_type = "P5";
+
+	// check type
 	if (strcmp(pgm->magic_number, default_read_type) != 0)
 	{
-		fprintf(stderr,
-				"%s(): Image magic number: [%s] not supporting, type must be: "
-				"[%s] format. \n",
-				__func__,
-				pgm->magic_number,
-				default_read_type);
+		fprintf(stderr, "%s(): Image magic number: [%s] not supporting, type must be: [%s] format. \n", __func__, pgm->magic_number, default_read_type);
 		return LPGM_FAIL;
 	}
-	// -------------------------------------------------------
 
-	// ------   open file write and binary mode  -------------
-	FILE* file_ptr = fopen(file_name, "wb");
+	// open file write and binary mode
+	file_ptr = fopen(file_name, "wb");
 	if (file_ptr == NULL)
 	{
 		fprintf(stderr, "%s(): Error opening file: [%s]. \n", __func__, file_name);
 		return LPGM_FAIL;
 	}
-	// -------------------------------------------------------
 
-	// ------   write file header  ---------------------------
+	// write file header
 	if (pgm->comment == NULL)
 	{
 		fprintf(file_ptr, "%s\n%d %d\n%d\n", pgm->magic_number, pgm->im.h, pgm->im.w, pgm->max_val);
@@ -196,28 +262,27 @@ pgm_write(const lpgm_t* pgm, const char* file_name)
 	{
 		fprintf(file_ptr, "%s\n#%s\n%d %d\n%d\n", pgm->magic_number, pgm->comment, pgm->im.h, pgm->im.w, pgm->max_val);
 	}
-	// -------------------------------------------------------
 
-	// ------   write image data  ----------------------------
-	for (int i = 0; i < (pgm->im.h * pgm->im.w); ++i)
+	// write image data
+	for (i = 0; i < (pgm->im.h * pgm->im.w); ++i)
 	{
-		unsigned char c = (unsigned char)pgm->im.data[i];
+		c = (unsigned char)pgm->im.data[i];
 		fputc(c, file_ptr);
 	}
-	// -------------------------------------------------------
 
+	// close file
 	fclose(file_ptr);
 
 	return LPGM_OK;
 }
 
 void
-pgm_destroy(lpgm_t* pgm)
+lpgm_file_destroy(lpgm_t* pgm)
 {
 	if (pgm->comment != NULL)
 	{
 		free(pgm->comment);
 		pgm->comment = NULL;
 	}
-	image_destroy(&pgm->im);
+	lpgm_image_destroy(&pgm->im);
 }

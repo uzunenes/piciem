@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 void
-dft(const lpgm_signal_t* input_signal, int signal_len, lpgm_signal_t* output_signal, int inverse)
+lpgm_dft(const lpgm_signal_t* input_signal, int signal_len, lpgm_signal_t* output_signal, int inverse)
 {
 	int w, x;
 	float a, ca, sa;
@@ -41,7 +41,7 @@ dft(const lpgm_signal_t* input_signal, int signal_len, lpgm_signal_t* output_sig
 }
 
 lpgm_status_t
-dft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* output_signal, int inverse)
+lpgm_dft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* output_signal, int inverse)
 {
 	int i, j;
 	lpgm_signal_t* temp_signal;
@@ -63,7 +63,7 @@ dft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* outpu
 			row_signal[j].real = input_signal[i * cols + j].real;
 		}
 
-		dft(row_signal, cols, out_row_signal, inverse);
+		lpgm_dft(row_signal, cols, out_row_signal, inverse);
 
 		for (j = 0; j < cols; ++j)
 		{
@@ -81,7 +81,7 @@ dft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* outpu
 			col_signal[j].real = temp_signal[j * cols + i].real;
 		}
 
-		dft(col_signal, rows, out_col_signal, inverse);
+		lpgm_dft(col_signal, rows, out_col_signal, inverse);
 
 		for (j = 0; j < rows; ++j)
 		{
@@ -96,7 +96,7 @@ dft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* outpu
 }
 
 void
-circshift(lpgm_signal_t* out, const lpgm_signal_t* in, int xdim, int ydim, int xshift, int yshift)
+lpgm_circshift(lpgm_signal_t* out, const lpgm_signal_t* in, int xdim, int ydim, int xshift, int yshift)
 {
 	int i, j, ii, jj;
 
@@ -124,7 +124,7 @@ circshift(lpgm_signal_t* out, const lpgm_signal_t* in, int xdim, int ydim, int x
 }
 
 void
-print_signal(const lpgm_signal_t* s, int rows, int cols)
+lpgm_print_signal(const lpgm_signal_t* s, int rows, int cols)
 {
 	int i, j, index;
 

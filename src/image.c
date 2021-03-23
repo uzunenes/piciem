@@ -1,7 +1,7 @@
 #include "../include/libpgm.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /*
@@ -18,25 +18,29 @@
 
 */
 
-void image_destroy(lpgm_image_t* im)
+void
+image_destroy(lpgm_image_t* im)
 {
-    free(im->data);
-    im->data = NULL;
+	free(im->data);
+	im->data = NULL;
 }
 
-float get_pixel_value(const lpgm_image_t* im, int x, int y)
+float
+get_pixel_value(const lpgm_image_t* im, int x, int y)
 {
 	return im->data[x * im->w + y];
 }
 
-void set_pixel_value(lpgm_image_t* im, int x, int y, float val)
+void
+set_pixel_value(lpgm_image_t* im, int x, int y, float val)
 {
 	im->data[x * im->w + y] = val;
 }
 
-float get_pixel_extend_value(const lpgm_image_t* im, int x, int y)
+float
+get_pixel_extend_value(const lpgm_image_t* im, int x, int y)
 {
-	if( x < 0 || x >= im->h || y < 0 || y >= im->w )
+	if (x < 0 || x >= im->h || y < 0 || y >= im->w)
 	{
 		return 0;
 	}
@@ -44,52 +48,61 @@ float get_pixel_extend_value(const lpgm_image_t* im, int x, int y)
 	return get_pixel_value(im, x, y);
 }
 
-void print_image_pixels(const lpgm_image_t* im)
+void
+print_image_pixels(const lpgm_image_t* im)
 {
-	for( int x = 0; x < im->h; ++x )
+	int x, y;
+	float val;
+
+	for (x = 0; x < im->h; ++x)
 	{
-		for (int y = 0; y < im->w; ++y)
+		for (y = 0; y < im->w; ++y)
 		{
-			float val = get_pixel_value(im, x, y);
+			val = get_pixel_value(im, x, y);
 			fprintf(stdout, "%s(): (row, col), (x, y): [(%d, %d) %.1f] \n", __func__, x, y, val);
 		}
 	}
 }
 
-lpgm_image_t make_empty_image(int w, int h)
+lpgm_image_t
+make_empty_image(int w, int h)
 {
-    lpgm_image_t im;
+	lpgm_image_t im;
 
-    im.w = w;
-    im.h = h;
-    im.data = (float*)calloc(w * h, sizeof(float));
+	im.w = w;
+	im.h = h;
+	im.data = (float*)calloc(w * h, sizeof(float));
 
-    return im;
+	return im;
 }
 
-lpgm_image_t copy_image(const lpgm_image_t* input_im)
+lpgm_image_t
+copy_image(const lpgm_image_t* input_im)
 {
-    lpgm_image_t out_im = make_empty_image(input_im->w, input_im->h);
+	lpgm_image_t out_im;
 
-    memcpy(out_im.data, input_im->data, input_im->w * input_im->h * sizeof(float));
+	out_im = make_empty_image(input_im->w, input_im->h);
 
-    return out_im;
+	memcpy(out_im.data, input_im->data, input_im->w * input_im->h * sizeof(float));
+
+	return out_im;
 }
 
-lpgm_image_t border_image(const lpgm_image_t* input_im, int border_size)
+lpgm_image_t
+border_image(const lpgm_image_t* input_im, int border_size)
 {
 	int i, j;
-	int new_image_rows, new_image_cols;
+	int out_im_rows, out_im_cols;
 	unsigned char val;
 	lpgm_image_t out_im;
-	
+
 	out_im = make_empty_image(input_im->w + 2 * border_size, input_im->h + 2 * border_size);
 	out_im_rows = out_im.h;
 	out_im_cols = out_im.w;
 
-	for( i = 0; i < out_im_rows; ++i )
+	for (i = 0; i < out_im_rows; ++i)
 	{
-		for( j = 0; j < out_im_cols; ++j )
+		for (j = 0; j < out_im_cols; ++j)
 		{
 			val = get_pixel_extend_value(input_im, i - border_size, j - border_size);
 			set_pixel_value(&out_im, i, j, val);
@@ -97,4 +110,10 @@ lpgm_image_t border_image(const lpgm_image_t* input_im, int border_size)
 	}
 
 	return out_im;
+}
+
+void
+normalize_image_data(lpgm_image_t* im, float new_max)
+{
+	normalize_array(im->data, im->w * im->h, new_max);
 }

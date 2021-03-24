@@ -34,6 +34,7 @@ extern "C"
 	} lpgm_t;
 
 
+	// pgmio.h
 	lpgm_status_t lpgm_file_read(const char* file_name, lpgm_t* pgm);
 
 	lpgm_status_t lpgm_file_write(const lpgm_t* pgm, const char* file_name);
@@ -41,55 +42,46 @@ extern "C"
 	void lpgm_file_destroy(lpgm_t* pgm);
 
 
+	// utils.h
 	float lpgm_get_2Darray_value(const float* data, int cols, int x, int y);
 
-	void lpgm_normalize_array(float* data, int len, float new_max);
+	lpgm_status_t lpgm_normalize_array(float* data, int len, float new_max);
 
+
+	// image.h
+	lpgm_image_t lpgm_make_empty_image(int w, int h);
+
+	lpgm_image_t lpgm_copy_image(const lpgm_image_t* input_im);
+
+	lpgm_image_t lpgm_border_image(const lpgm_image_t* input_im, int border_size);
 
 	void lpgm_image_destroy(lpgm_image_t* im);
 
 	float lpgm_get_pixel_value(const lpgm_image_t* im, int x, int y);
 
-	void lpgm_set_pixel_value(lpgm_image_t* im, int x, int y, float val);
-
 	float lpgm_get_pixel_extend_value(const lpgm_image_t* im, int x, int y);
 
-	void lpgm_print_image_pixels(const lpgm_image_t* im);
-
-	lpgm_image_t lpgm_make_empty_image(int w, int h);
-
-	lpgm_image_t lpgm_copy_image(const lpgm_image_t* input_im);
+	void lpgm_set_pixel_value(lpgm_image_t* im, int x, int y, float val);
 
 	void lpgm_normalize_image_data(lpgm_image_t* im, float new_max);
 
-	lpgm_image_t lpgm_filter_image(const lpgm_image_t* im, float* box_kernel_data, int box_kernel_size);
+	lpgm_image_t lpgm_filter_image(const lpgm_image_t* im, const float* box_kernel_data, int box_kernel_size);
 
-	void lpgm_histogram_equalization(lpgm_image_t* im);
 
-	void lpgm_obtain_negative_image(lpgm_image_t* im, float intensity_level_max);
+	// dft.h
+	lpgm_signal_t* lpgm_make_empty_signal(int signal_len);
 
-	void lpgm_log_transformation_image(lpgm_image_t* im, float max_val, int c);
+	void lpgm_destroy_signal(lpgm_signal_t* signal);
 
-	void lpgm_power_law_transformation_image(lpgm_image_t* im, int c, float y);
+	lpgm_status_t lpgm_image_to_signal(const lpgm_image_t* im, lpgm_signal_t* out_signal);
 
-	lpgm_image_t lpgm_average_filter_image(lpgm_image_t* im, int box_size);
+	lpgm_status_t lpgm_dft(const lpgm_signal_t* input_signal, int signal_len, lpgm_signal_t* out_signal, int inverse);
 
-	/*
-	 * 2D Discrete Fourier Transform
-	 * inverse flag is 1 -> IDFT
-	 */
-	lpgm_status_t lpgm_dft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* output_signal, int inverse);
+	lpgm_status_t lpgm_dft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* out_signal, int inverse);
 
-	/*
-	 * 1D Discrete Fourier Transform
-	 * inverse flag is 1 -> IDFT
-	 */
-	void lpgm_dft(const lpgm_signal_t* input_signal, int signal_len, lpgm_signal_t* output_signal, int inverse);
+	lpgm_status_t lpgm_circshift(const lpgm_signal_t* input_signal, int xdim, int ydim, lpgm_signal_t* out_signal, int xshift, int yshift);
 
-	// print, time or frequency domain signal imaginary and real part
-	void lpgm_print_signal(const lpgm_signal_t* s, int rows, int cols);
-
-	void lpgm_circshift(lpgm_signal_t* out, const lpgm_signal_t* in, int xdim, int ydim, int xshift, int yshift);
+	lpgm_status_t lpgm_print_signal(const lpgm_signal_t* signal, int rows, int cols);
 
 #ifdef __cplusplus
 }

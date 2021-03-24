@@ -5,16 +5,26 @@
 float
 lpgm_get_2Darray_value(const float* data, int cols, int x, int y)
 {
+	if( data == NULL)
+	{
+		return 0;
+	}
+
 	return data[x * cols + y];
 }
 
-void
+lpgm_status_t
 lpgm_normalize_array(float* data, int len, float new_max)
 {
 	int i;
 	float temp;
 	float min = 9999999;
 	float max = -999999;
+
+	if(data == NULL)
+	{
+		return LPGM_FAIL;
+	}
 
 	// find max and min value
 	for (i = 0; i < len; ++i)
@@ -40,4 +50,6 @@ lpgm_normalize_array(float* data, int len, float new_max)
 	{
 		data[i] = (data[i] - min) / (max - min) * new_max;
 	}
+
+	return LPGM_OK;
 }

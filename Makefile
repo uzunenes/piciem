@@ -8,7 +8,7 @@ OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
 all: obj libpgm.so
 
 libpgm.so: $(OBJ)
-	$(CC) $(CFLAGS) -shared $(OBJ) -o libpgm.so
+	$(CC) $(CFLAGS) -shared $(OBJ) -lm -o libpgm.so
 
 obj/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@

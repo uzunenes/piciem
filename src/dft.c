@@ -61,6 +61,9 @@ lpgm_dft(const lpgm_signal_t* input_signal, int signal_len, lpgm_signal_t* out_s
 
 	for (i = 0; i < signal_len; ++i)
 	{
+		out_signal[i].real = 0;
+		out_signal[i].imaginary = 0;
+
 		for (j = 0; j < signal_len; ++j)
 		{
 			t = -2 * pi * i * j / (float)signal_len;

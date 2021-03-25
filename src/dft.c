@@ -108,6 +108,13 @@ lpgm_dft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* 
 		return LPGM_FAIL;
 	}
 
+	// set zeros
+	for (i = 0; i < (rows * cols); ++i)
+	{
+		out_signal[i].real = 0;
+		out_signal[i].imaginary = 0;
+	}
+
 	// each row DFT
 	for (i = 0; i < rows; ++i)
 	{

@@ -36,15 +36,20 @@ gaussian_high_pass_filter(int rows, int cols, double D0, double yL, double yH, d
 void
 histogram_equalization(lpgm_image_t* im)
 {
-	const int L = 255;
+	const float L = 255.0;
 	unsigned long int count;
 	int hist[256], new_gray_level[256];
-	int i, data_len, old_val, new_val;
+	int i, data_len;
+	float old_val, new_val;
 
 	data_len = im->w * im->h;
+	for (i = 0; i < 256; ++i)
+	{
+		hist[i] = 0;
+		new_gray_level[i] = 0;
+	}
 
 	// orijinal histogram
-	memset(hist, 0, sizeof(hist));
 	for (i = 0; i < data_len; ++i)
 	{
 		hist[(int)im->data[i]] += 1;
@@ -52,19 +57,19 @@ histogram_equalization(lpgm_image_t* im)
 
 	// cum hist.
 	count = 0;
-	memset(new_gray_level, 0, sizeof(new_gray_level));
 	for (i = 0; i < 256; ++i)
 	{
 		count += hist[i];
-		new_gray_level[i] = round(((float)count * L) / data_len);
+		new_gray_level[i] = ((float)count * L) / data_len;
 	}
 
 	for (i = 0; i < data_len; ++i)
 	{
 		old_val = im->data[i];
-		new_val = new_gray_level[old_val];
-		im->data[i] = (unsigned char)new_val;
+		new_val = new_gray_level[(int)old_val];
+		im->data[i] = new_val;
 	}
+
 }
 
 int
@@ -84,6 +89,7 @@ homomorphic_filtering(lpgm_image_t* im, double D0, double yLow, double yHigh, do
 	im_signal = lpgm_make_empty_signal(im->w * im->h);
 	lpgm_image_to_signal(im, im_signal);
 
+	fprintf(stdout, "%s(): Log \n", __func__);
 	// log
 	L = 255.0;
 	for (i = 0; i < (rows * cols); ++i)
@@ -93,17 +99,20 @@ homomorphic_filtering(lpgm_image_t* im, double D0, double yLow, double yHigh, do
 	}
 
 	// dft
+	fprintf(stdout, "%s(): dft \n", __func__);
 	im_dft_signal = lpgm_make_empty_signal(im->w * im->h);
 	inverse = 0;
 	lpgm_dft2(im_signal, rows, cols, im_dft_signal, inverse);
 
 	// dft shift
+	fprintf(stdout, "%s(): circshift \n", __func__);
 	im_dft_shifted_signal = lpgm_make_empty_signal(im->w * im->h);
 	x_shift = rows / 2;
 	y_shift = cols / 2;
 	lpgm_circshift(im_dft_signal, rows, cols, im_dft_shifted_signal, x_shift, y_shift);
 
 	// gaussian high pass filter create
+	fprintf(stdout, "%s(): gaussian high pass filter \n", __func__);
 	dft_filter = gaussian_high_pass_filter(rows, cols, D0, yLow, yHigh, c);
 
 	// F[u,v] ./ H[u,v]
@@ -120,26 +129,32 @@ homomorphic_filtering(lpgm_image_t* im, double D0, double yLow, double yHigh, do
 		im_dft_shifted_signal[i].real = ac_bd;
 	}
 
+	fprintf(stdout, "%s(): circshift \n", __func__);
 	lpgm_circshift(im_dft_shifted_signal, rows, cols, im_dft_signal, x_shift, y_shift);
 
 	// IDFT
+	fprintf(stdout, "%s(): idft \n", __func__);
 	inverse = 1;
 	lpgm_dft2(im_dft_signal, rows, cols, im_signal, inverse);
 
+	fprintf(stdout, "%s(): abs \n", __func__);
 	for (i = 0; i < rows * cols; ++i)
 	{
 		im->data[i] = sqrt(pow(im_signal[i].real, 2) + pow(im_signal[i].imaginary, 2)); // abs
 	}
 
 	// exp
+	fprintf(stdout, "%s(): exp %f\n", __func__, im->data[0]);
 	for (i = 0; i < rows * cols; ++i)
 	{
 		im->data[i] = exp(im->data[i]);
 		im->data[i] = im->data[i] - 1;
 	}
 
+	fprintf(stdout, "%s(): normalize %f\n", __func__, im->data[0]);
 	lpgm_normalize_image_data(im, 255.0);
 
+	fprintf(stdout, "%s(): histeq %f\n", __func__, im->data[0]);
 	histogram_equalization(im);
 
 	lpgm_destroy_signal(im_signal);

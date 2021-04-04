@@ -17,22 +17,26 @@ obj:
 	mkdir -p obj
 
 
-install:
-	@rm -f /usr/local/include/libpgm.h
+install: uninstall
 	cp include/libpgm.h /usr/local/include
 
-	@rm -f /usr/local/lib/libpgm.so*
 	cp libpgm.so /usr/local/lib/libpgm.so.$(Version)
 	@cd /usr/local/lib/ ; ln -s libpgm.so.$(Version) libpgm.so
 
-	@rm -f /usr/local/lib/pkgconfig/libpgm.pc
+	@rm -f libpgm.pc
 	@echo "Name: libpgm" >> libpgm.pc
 	@echo "Description: github.com/uzunenes/libpgm" >> libpgm.pc
 	@echo "Version: $(Version)" >> libpgm.pc
 	@echo "Libs: -L/usr/local/lib -lpgm" >> libpgm.pc
 	@echo "Cflags: -I/usr/local/include" >> libpgm.pc
 
-	@cp libpgm.pc /usr/local/lib/pkgconfig
+	cp libpgm.pc /usr/local/lib/pkgconfig
+
+
+uninstall:
+	rm -f /usr/local/include/libpgm.h
+	rm -f /usr/local/lib/libpgm.so*
+	rm -f /usr/local/lib/pkgconfig/libpgm.pc
 
 
 clean:

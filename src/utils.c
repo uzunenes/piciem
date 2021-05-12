@@ -5,7 +5,7 @@
 float
 lpgm_get_2Darray_value(const float* data, int cols, int x, int y)
 {
-	if( data == NULL)
+	if (data == NULL)
 	{
 		return 0;
 	}
@@ -21,7 +21,7 @@ lpgm_normalize_array(float* data, int len, float new_max)
 	float min = 9999999;
 	float max = -999999;
 
-	if(data == NULL)
+	if (data == NULL)
 	{
 		return LPGM_FAIL;
 	}

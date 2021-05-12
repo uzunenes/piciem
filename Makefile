@@ -1,36 +1,38 @@
 Version = 0.1
+Install_prefix = /usr/local
 CC = gcc
 CFLAGS = -Wall -Wextra -O3 -fPIC
-SRC = $(wildcard src/*.c)
-OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
 
+OBJCC = $(patsubst src/%.c, obj/%.o, $(wildcard src/*c))
+
+LDFLAGS = -lm
 
 all: obj libpgm.so
 
 libpgm.so: $(OBJ)
-	$(CC) $(CFLAGS) -shared $(OBJ) -lm -o libpgm.so
+	$(CC) $(CFLAGS) -shared $(OBJ) $(LDFLAGS) -o libpgm.so
 
 obj/%.o: src/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) -c $< $(CFLAGS) -o $@
 
 obj:
 	mkdir -p obj
 
 
 install: uninstall
-	cp include/libpgm.h /usr/local/include
+	cp include/libpgm.h $(Install_prefix)/include
 
-	cp libpgm.so /usr/local/lib/libpgm.so.$(Version)
-	@cd /usr/local/lib/ ; ln -s libpgm.so.$(Version) libpgm.so
+	cp libpgm.so $(Install_prefix)/lib/libpgm.so.$(Version)
+	@cd $(Install_prefix)/lib/ ; ln -s libpgm.so.$(Version) libpgm.so
 
 	@rm -f libpgm.pc
 	@echo "Name: libpgm" >> libpgm.pc
 	@echo "Description: github.com/uzunenes/libpgm" >> libpgm.pc
 	@echo "Version: $(Version)" >> libpgm.pc
-	@echo "Libs: -L/usr/local/lib -lpgm" >> libpgm.pc
-	@echo "Cflags: -I/usr/local/include" >> libpgm.pc
+	@echo "Libs: -L$(Install_prefix)/lib -lpgm" >> libpgm.pc
+	@echo "Cflags: -I$(Install_prefix)/include" >> libpgm.pc
 
-	cp libpgm.pc /usr/local/lib/pkgconfig
+	cp libpgm.pc $(Install_prefix)/lib/pkgconfig
 
 
 uninstall:

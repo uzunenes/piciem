@@ -12,7 +12,6 @@ extern "C"
 		LPGM_FAIL = -1
 	} lpgm_status_t;
 
-
 	typedef struct
 	{
 		float imaginary;
@@ -33,7 +32,6 @@ extern "C"
 		lpgm_image_t im;
 	} lpgm_t;
 
-
 	// pgmio.h
 	lpgm_status_t lpgm_file_read(const char* file_name, lpgm_t* pgm);
 
@@ -41,12 +39,10 @@ extern "C"
 
 	void lpgm_file_destroy(lpgm_t* pgm);
 
-
 	// utils.h
 	float lpgm_get_2Darray_value(const float* data, int cols, int x, int y);
 
 	lpgm_status_t lpgm_normalize_array(float* data, int len, float new_max);
-
 
 	// image.h
 	lpgm_image_t lpgm_make_empty_image(int w, int h);
@@ -66,7 +62,6 @@ extern "C"
 	void lpgm_normalize_image_data(lpgm_image_t* im, float new_max);
 
 	lpgm_image_t lpgm_filter_image(const lpgm_image_t* im, const float* box_kernel_data, int box_kernel_size);
-
 
 	// dft.h
 	lpgm_signal_t* lpgm_make_empty_signal(int signal_len);

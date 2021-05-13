@@ -4,7 +4,7 @@
 #include <string.h>
 #include <time.h>
 
-#include <libpgm.h>
+#include <pigiem.h>
 
 lpgm_signal_t*
 get_gaussian_high_pass_filter(int rows, int cols, float D0, float yL, float yH, float c)

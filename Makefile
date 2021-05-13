@@ -1,5 +1,5 @@
 Version = 0.1
-Install_prefix = /usr/local
+Prefix = /usr/local
 CC = gcc
 CFLAGS = -Wall -Wextra -O3 -fPIC
 
@@ -9,8 +9,8 @@ LDFLAGS = -lm
 
 all: obj pigiem.so
 
-pigiem.so: $(OBJ)
-	$(CC) $(CFLAGS) -shared $(OBJ) $(LDFLAGS) -o pigiem.so
+pigiem.so: $(OBJCC)
+	$(CC) $(CFLAGS) -shared $(OBJCC) $(LDFLAGS) -o pigiem.so
 
 obj/%.o: src/%.c
 	$(CC) -c $< $(CFLAGS) -o $@
@@ -20,25 +20,25 @@ obj:
 
 
 install: uninstall
-	cp include/pigiem.h $(Install_prefix)/include
+	cp include/pigiem.h $(Prefix)/include
 
-	cp pigiem.so $(Install_prefix)/lib/libpigiem.so.$(Version)
-	@cd $(Install_prefix)/lib/ ; ln -s libpigiem.so.$(Version) libpigiem.so
+	cp pigiem.so $(Prefix)/lib/libpigiem.so.$(Version)
+	@cd $(Prefix)/lib/ ; ln -s libpigiem.so.$(Version) libpigiem.so
 
-	@rm -f pigiem.pc
-	@echo "Name: pigiem" >> pigiem.pc
-	@echo "Description: github.com/uzunenes/pigiem" >> pigiem.pc
-	@echo "Version: $(Version)" >> pigiem.pc
-	@echo "Libs: -L$(Install_prefix)/lib -lpigiem" >> pigiem.pc
-	@echo "Cflags: -I$(Install_prefix)/include" >> pigiem.pc
+	@rm -f libpigiem.pc
+	@echo "Name: libpigiem" >> libpigiem.pc
+	@echo "Description: github.com/uzunenes/pigiem" >> libpigiem.pc
+	@echo "Version: $(Version)" >> libpigiem.pc
+	@echo "Libs: -L$(Prefix)/lib -lpigiem" >> libpigiem.pc
+	@echo "Cflags: -I$(Prefix)/include" >> libpigiem.pc
 
-	cp pigiem.pc $(Install_prefix)/lib/pkgconfig
+	cp libpigiem.pc $(Prefix)/lib/pkgconfig
 
 
 uninstall:
-	rm -f $(Install_prefix)/include/pigiem.h
-	rm -f $(Install_prefix)/lib/libpigiem.so*
-	rm -f $(Install_prefix)/lib/pkgconfig/pigiem.pc
+	rm -f $(Prefix)/include/pigiem.h
+	rm -f $(Prefix)/lib/libpigiem.so*
+	rm -f $(Prefix)/lib/pkgconfig/libpigiem.pc
 
 
 clean:

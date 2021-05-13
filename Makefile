@@ -7,10 +7,10 @@ OBJCC = $(patsubst src/%.c, obj/%.o, $(wildcard src/*c))
 
 LDFLAGS = -lm
 
-all: obj libpgm.so
+all: obj pigiem.so
 
-libpgm.so: $(OBJ)
-	$(CC) $(CFLAGS) -shared $(OBJ) $(LDFLAGS) -o libpgm.so
+pigiem.so: $(OBJ)
+	$(CC) $(CFLAGS) -shared $(OBJ) $(LDFLAGS) -o pigiem.so
 
 obj/%.o: src/%.c
 	$(CC) -c $< $(CFLAGS) -o $@
@@ -20,25 +20,25 @@ obj:
 
 
 install: uninstall
-	cp include/libpgm.h $(Install_prefix)/include
+	cp include/pigiem.h $(Install_prefix)/include
 
-	cp libpgm.so $(Install_prefix)/lib/libpgm.so.$(Version)
-	@cd $(Install_prefix)/lib/ ; ln -s libpgm.so.$(Version) libpgm.so
+	cp pigiem.so $(Install_prefix)/lib/libpigiem.so.$(Version)
+	@cd $(Install_prefix)/lib/ ; ln -s libpigiem.so.$(Version) libpigiem.so
 
-	@rm -f libpgm.pc
-	@echo "Name: libpgm" >> libpgm.pc
-	@echo "Description: github.com/uzunenes/libpgm" >> libpgm.pc
-	@echo "Version: $(Version)" >> libpgm.pc
-	@echo "Libs: -L$(Install_prefix)/lib -lpgm" >> libpgm.pc
-	@echo "Cflags: -I$(Install_prefix)/include" >> libpgm.pc
+	@rm -f pigiem.pc
+	@echo "Name: pigiem" >> pigiem.pc
+	@echo "Description: github.com/uzunenes/pigiem" >> pigiem.pc
+	@echo "Version: $(Version)" >> pigiem.pc
+	@echo "Libs: -L$(Install_prefix)/lib -lpigiem" >> pigiem.pc
+	@echo "Cflags: -I$(Install_prefix)/include" >> pigiem.pc
 
-	cp libpgm.pc $(Install_prefix)/lib/pkgconfig
+	cp pigiem.pc $(Install_prefix)/lib/pkgconfig
 
 
 uninstall:
-	rm -f /usr/local/include/libpgm.h
-	rm -f /usr/local/lib/libpgm.so*
-	rm -f /usr/local/lib/pkgconfig/libpgm.pc
+	rm -f $(Install_prefix)/include/pigiem.h
+	rm -f $(Install_prefix)/lib/libpigiem.so*
+	rm -f $(Install_prefix)/lib/pkgconfig/pigiem.pc
 
 
 clean:

@@ -1,4 +1,4 @@
-#include "../include/libpgm.h"
+#include "../include/pigiem.h"
 
 #include <math.h>
 #include <stdio.h>

@@ -1,8 +1,7 @@
+#include "../include/pigiem.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "../include/libpgm.h"
 
 static int
 read_magic_number(FILE* file_ptr, lpgm_t* pgm)

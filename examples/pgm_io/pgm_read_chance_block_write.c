@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <libpgm.h>
+#include <pigiem.h>
 
 struct point_s
 {

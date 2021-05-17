@@ -52,7 +52,6 @@ lpgm_dft(const lpgm_signal_t* input_signal, int signal_len, lpgm_signal_t* out_s
 {
 	int i, j;
 	float t, cost, sint;
-	const float pi = 3.14;
 
 	if (input_signal == NULL || out_signal == NULL)
 	{
@@ -66,7 +65,7 @@ lpgm_dft(const lpgm_signal_t* input_signal, int signal_len, lpgm_signal_t* out_s
 
 		for (j = 0; j < signal_len; ++j)
 		{
-			t = -2 * pi * i * j / (float)signal_len;
+			t = -2 * M_PI * i * j / (float)signal_len;
 
 			if (inverse == 1)
 			{
@@ -192,6 +191,27 @@ lpgm_circshift(const lpgm_signal_t* input_signal, int xdim, int ydim, lpgm_signa
 }
 
 lpgm_status_t
+lpgm_zero_padding_signal(const lpgm_signal_t* input_signal, int xdim, int ydim, lpgm_signal_t* out_signal, int newxdim, int newydim)
+{
+	int i, j;
+
+	if (input_signal == NULL || out_signal == NULL || xdim > newxdim || ydim > newydim)
+	{
+		return LPGM_FAIL;
+	}
+
+	for (i = 0; i < xdim; ++i)
+	{
+		for (j = 0; j < ydim; ++j)
+		{
+			out_signal[i * newydim + j] = input_signal[i * ydim + j];
+		}
+	}
+
+	return LPGM_OK;
+}
+
+lpgm_status_t
 lpgm_print_signal(const lpgm_signal_t* signal, int rows, int cols)
 {
 	int i, j, index;
@@ -210,11 +230,11 @@ lpgm_print_signal(const lpgm_signal_t* signal, int rows, int cols)
 			index = i * cols + j;
 			if (fabs(signal[index].imaginary) < 10e-7)
 			{
-				fprintf(stdout, "%.1f  ", signal[index].real);
+				fprintf(stdout, "%.2f  ", signal[index].real);
 			}
 			else
 			{
-				fprintf(stdout, "%.1f j%.1f  ", signal[index].real, signal[index].imaginary);
+				fprintf(stdout, "%.2f j%.2f  ", signal[index].real, signal[index].imaginary);
 			}
 		}
 		fprintf(stdout, "\n");

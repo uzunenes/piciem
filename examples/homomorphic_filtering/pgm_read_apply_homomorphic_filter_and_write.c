@@ -7,10 +7,10 @@
 #include <pigiem.h>
 
 lpgm_signal_t*
-get_gaussian_high_pass_filter(int rows, int cols, float D0, float yL, float yH, float c)
+get_butterworth_high_pass_filter(int rows, int cols, float D0, float yL, float yH, float n)
 {
 	int u, v;
-	float square_D0, value, square_Duv;
+	float temp;
 	lpgm_signal_t* filter;
 
 	filter = lpgm_make_empty_signal(rows * cols);
@@ -19,72 +19,30 @@ get_gaussian_high_pass_filter(int rows, int cols, float D0, float yL, float yH, 
 		return NULL;
 	}
 
-	square_D0 = pow(D0, 2);
 	for (u = 0; u < rows; ++u)
 	{
 		for (v = 0; v < cols; ++v)
 		{
-			// (u - rows/2)^2 + (v - cols/2)
-			square_Duv = pow((float)u - ((float)rows / 2.0), 2) + pow((float)v - ((float)cols / 2.0), 2);
+			// (u - rows/2)^2 + (v - cols/2)^0.5
+			temp = sqrt(pow((float)u - ((float)rows / 2.0), 2) + pow((float)v - ((float)cols / 2.0), 2));
 
-			value = 1.0 - exp(-1 * c * square_Duv / square_D0);
+			temp = 1.0 / (1.0 + pow(D0 / temp, 2.0 * n));
 
-			filter[u * cols + v].real = (yH - yL) * value + yL;
+			filter[u * cols + v].real = 1.0 - ((yH - yL) * temp + yL);
 		}
 	}
 
 	return filter;
 }
 
-void
-histogram_equalization(lpgm_image_t* im)
-{
-	const float max_pixel_val_L = 255.0;
-	unsigned long int count;
-	int hist[256], new_gray_level[256];
-	int i, data_len;
-	float old_val, new_val;
-
-	data_len = im->w * im->h;
-
-	// fill zero
-	for (i = 0; i < 256; ++i)
-	{
-		hist[i] = 0;
-		new_gray_level[i] = 0;
-	}
-
-	// orijinal histogram
-	for (i = 0; i < data_len; ++i)
-	{
-		hist[(int)im->data[i]] += 1;
-	}
-
-	// cumulative histogram
-	count = 0;
-	for (i = 0; i < 256; ++i)
-	{
-		count += hist[i];
-		new_gray_level[i] = ((float)count * max_pixel_val_L) / data_len;
-	}
-
-	for (i = 0; i < data_len; ++i)
-	{
-		old_val = im->data[i];
-		new_val = new_gray_level[(int)old_val];
-		im->data[i] = new_val;
-	}
-}
-
 /*
  * applying the log transformation
- * Eq: s = clog(1 + r)
+ * Eq: s = clog2(1 + r)
  */
 void
-lpgm_log_transformation_image(lpgm_image_t* im, float max_val, int c)
+lpgm_log_transformation_image(lpgm_image_t* im, int c)
 {
 	int i, data_len;
-	float r;
 	float* new_data;
 
 	data_len = im->w * im->h;
@@ -92,8 +50,7 @@ lpgm_log_transformation_image(lpgm_image_t* im, float max_val, int c)
 
 	for (i = 0; i < data_len; ++i)
 	{
-		r = im->data[i] / max_val; // normalize [0 1]
-		new_data[i] = c * log(1.0 + r);
+		new_data[i] = c * log2(1.0 + im->data[i]);
 	}
 
 	memcpy(im->data, new_data, data_len * sizeof(float));
@@ -103,7 +60,7 @@ lpgm_log_transformation_image(lpgm_image_t* im, float max_val, int c)
 
 /*
  * applying the Exponential transformation
- * Eq: s = c * ( exp(p) - 1 )
+ * Eq: s = c * exp(p)
  */
 void
 lpgm_exponential_transformation_image(lpgm_image_t* im, int c)
@@ -114,7 +71,7 @@ lpgm_exponential_transformation_image(lpgm_image_t* im, int c)
 
 	for (i = 0; i < data_len; ++i)
 	{
-		im->data[i] = c * (exp(im->data[i]) - 1);
+		im->data[i] = c * exp(im->data[i]);
 	}
 }
 
@@ -122,9 +79,9 @@ int
 homomorphic_filtering(lpgm_image_t* im, float D0, float yLow, float yHigh, float c)
 {
 	time_t time_start, time_end;
-	int i, rows, cols, im_data_len, inverse, x_shift, y_shift;
-	float max_val_L, ac_bd, ad_bc;
-	lpgm_signal_t *im_signal, *im_dft_signal, *im_dft_shifted_signal, *dft_gaussian_filter;
+	int i, rows, cols, im_data_len, inverse;
+	float ac_bd, ad_bc;
+	lpgm_signal_t *im_signal, *im_dft_signal, *im_dft_filtered_signal, *dft_butterworth_hpfilter;
 
 	fprintf(stdout, "%s(): Processing .. \n", __func__);
 	time_start = time(0);
@@ -135,43 +92,35 @@ homomorphic_filtering(lpgm_image_t* im, float D0, float yLow, float yHigh, float
 	im_data_len = rows * cols;
 	im_signal = lpgm_make_empty_signal(im_data_len);
 	im_dft_signal = lpgm_make_empty_signal(im_data_len);
-	im_dft_shifted_signal = lpgm_make_empty_signal(im_data_len);
-	dft_gaussian_filter = get_gaussian_high_pass_filter(rows, cols, D0, yLow, yHigh, c);
+	im_dft_filtered_signal = lpgm_make_empty_signal(im_data_len);
+
+	dft_butterworth_hpfilter = get_butterworth_high_pass_filter(rows, cols, D0, yLow, yHigh, c);
 
 	fprintf(stdout, "%s(): Log transformation .. \n", __func__);
-	max_val_L = 255.0;
-	lpgm_log_transformation_image(im, max_val_L, 1);
+	lpgm_log_transformation_image(im, 1);
+	lpgm_image_to_signal(im, im_signal);
 
 	fprintf(stdout, "%s(): dft .. \n", __func__);
-	lpgm_image_to_signal(im, im_signal);
 	inverse = 0;
 	lpgm_dft2(im_signal, rows, cols, im_dft_signal, inverse);
 
-	fprintf(stdout, "%s(): dft shift, circshift .. \n", __func__);
-	x_shift = rows / 2;
-	y_shift = cols / 2;
-	lpgm_circshift(im_dft_signal, rows, cols, im_dft_shifted_signal, x_shift, y_shift);
-
-	fprintf(stdout, "%s(): Gaussian filter -> F[u,v] ./ H[u,v] .. \n", __func__);
+	fprintf(stdout, "%s(): filtering -> F[u,v] ./ H[u,v] .. \n", __func__);
 	for (i = 0; i < im_data_len; ++i)
 	{
 		// (a+jb) * (c+jd) = (ac-bd) + j(ad+bc)
 
 		// ac-bd
-		ac_bd = im_dft_shifted_signal[i].real * dft_gaussian_filter[i].real - im_dft_shifted_signal[i].imaginary * dft_gaussian_filter[i].imaginary;
+		ac_bd = im_dft_signal[i].real * dft_butterworth_hpfilter[i].real - im_dft_signal[i].imaginary * dft_butterworth_hpfilter[i].imaginary;
 		// ad+bc
-		ad_bc = im_dft_shifted_signal[i].real * dft_gaussian_filter[i].imaginary + im_dft_shifted_signal[i].imaginary * dft_gaussian_filter[i].real;
+		ad_bc = im_dft_signal[i].real * dft_butterworth_hpfilter[i].imaginary + im_dft_signal[i].imaginary * dft_butterworth_hpfilter[i].real;
 
-		im_dft_shifted_signal[i].imaginary = ad_bc;
-		im_dft_shifted_signal[i].real = ac_bd;
+		im_dft_filtered_signal[i].imaginary = ad_bc;
+		im_dft_filtered_signal[i].real = ac_bd;
 	}
-
-	fprintf(stdout, "%s(): dft shift, circshift .. \n", __func__);
-	lpgm_circshift(im_dft_shifted_signal, rows, cols, im_dft_signal, x_shift, y_shift);
 
 	fprintf(stdout, "%s(): idft .. \n", __func__);
 	inverse = 1;
-	lpgm_dft2(im_dft_signal, rows, cols, im_signal, inverse);
+	lpgm_dft2(im_dft_filtered_signal, rows, cols, im_signal, inverse);
 
 	fprintf(stdout, "%s(): abs \n", __func__);
 	for (i = 0; i < im_data_len; ++i)
@@ -186,13 +135,10 @@ homomorphic_filtering(lpgm_image_t* im, float D0, float yLow, float yHigh, float
 	fprintf(stdout, "%s(): Normalize image data [0 - 255] .. \n", __func__);
 	lpgm_normalize_image_data(im, 255.0);
 
-	// fprintf(stdout, "%s(): Histogram equalization .. \n", __func__);
-	// histogram_equalization(im);
-
 	lpgm_destroy_signal(im_signal);
 	lpgm_destroy_signal(im_dft_signal);
-	lpgm_destroy_signal(im_dft_shifted_signal);
-	lpgm_destroy_signal(dft_gaussian_filter);
+	lpgm_destroy_signal(im_dft_filtered_signal);
+	lpgm_destroy_signal(dft_butterworth_hpfilter);
 
 	time_end = time(0);
 	fprintf(stdout, "%s(): It took [%.2f] second(s). \n", __func__, difftime(time_end, time_start));
@@ -236,103 +182,32 @@ main(int argc, char** argv)
 	float D0, yLow, yHigh, c;
 
 	// homomorphic_filtering
-	if ((argc >= 2 && argc == 14) && (strcmp(argv[1], "-homomorphic_filtering") == 0))
+	if (argc == 13)
 	{
-		if (strcmp(argv[2], "-input") == 0 && strcmp(argv[4], "-output") == 0 && strcmp(argv[6], "-D0") == 0 && strcmp(argv[8], "-yLow") == 0 && strcmp(argv[10], "-yHigh") == 0 && strcmp(argv[12], "-c") == 0)
+		if (strcmp(argv[1], "-input") == 0 && strcmp(argv[3], "-output") == 0 && strcmp(argv[5], "-D0") == 0 && strcmp(argv[7], "-yLow") == 0 && strcmp(argv[9], "-yHigh") == 0 && strcmp(argv[11], "-c") == 0)
 		{
-			input_pgm_file_name = argv[3];
-			output_pgm_file_name = argv[5];
-			D0 = atof(argv[7]);
-			yLow = atof(argv[9]);
-			yHigh = atof(argv[11]);
-			c = atof(argv[13]);
+			input_pgm_file_name = argv[2];
+			output_pgm_file_name = argv[4];
+			D0 = atof(argv[6]);
+			yLow = atof(argv[8]);
+			yHigh = atof(argv[10]);
+			c = atof(argv[12]);
 		}
 		else
 		{
-			fprintf(stderr, "%s(): Usage: [./homework4.exe -homomorphic_filtering -input input_pgm_file_name.pgm -output output_pgm_file_name.pgm -D0 40 -yLow 0.5 -yHigh 2.0 -c 1] \n", __func__);
+			fprintf(stderr, "%s(): Usage: [./pgm_read_apply_homomorphic_filter_and_write.out -input input_example1.pgm -output output_pgm_file_name.pgm -D0 10 -yLow 0.099 -yHigh 1.01 -c 2] \n", __func__);
 			return -1;
 		}
 
-		fprintf(stdout, "%s(): parsed input parameter: type: [-homomorphic_filtering] input file: [%s] output file: [%s] D0: [%.2f] yLow[%.2f] yHigh: [%.2f] c: [%.2f]\n", __func__, input_pgm_file_name, output_pgm_file_name, D0, yLow, yHigh, c);
+		fprintf(stdout, "%s(): parsed input parameter: input file: [%s] output file: [%s] D0: [%.2f] yLow[%.2f] yHigh: [%.2f] c: [%.2f]\n", __func__, input_pgm_file_name, output_pgm_file_name, D0, yLow, yHigh, c);
 
 		read_image_apply_homomorphic_filter_and_save(input_pgm_file_name, output_pgm_file_name, D0, yLow, yHigh, c);
 	}
 	else
 	{
-		fprintf(stderr, "%s(): Usage: [./homework4.exe -homomorphic_filtering -input input_pgm_file_name.pgm -output output_pgm_file_name.pgm -D0 40 -yLow 0.5 -yHigh 2.0 -c 1] \n", __func__);
+		fprintf(stderr, "%s(): Usage: [./pgm_read_apply_homomorphic_filter_and_write.out -input input_example1.pgm -output output_pgm_file_name.pgm -D0 10 -yLow 0.099 -yHigh 1.01 -c 2] \n", __func__);
 		return -1;
 	}
 
 	return 0;
-}
-
-/*
- * obtain negative pgm image
- * Eq: s = (L - 1) - r
- * range [0, L - 1]
- */
-void
-lpgm_obtain_negative_image(lpgm_image_t* im, float intensity_level_max)
-{
-	int i;
-
-	for (i = 0; i < (im->w * im->h); ++i)
-	{
-		im->data[i] = intensity_level_max - im->data[i];
-	}
-}
-
-/*
-applying power law (gamma) transformations
-Eq: s = c*r^y
-*/
-void
-lpgm_power_law_transformation_image(lpgm_image_t* im, int c, float y)
-{
-	int i;
-
-	for (i = 0; i < (im->w * im->h); ++i)
-	{
-		im->data[i] = c * pow(im->data[i], y);
-	}
-}
-
-/*
- * Average filtering with a box kernel
- */
-lpgm_image_t
-lpgm_average_filter_image(lpgm_image_t* im, int box_size)
-{
-	lpgm_image_t out_im;
-	int i, average_box_filter_len;
-	float* average_box_filter;
-
-	// create filter
-	average_box_filter_len = box_size * box_size;
-	average_box_filter = (float*)calloc(average_box_filter_len, sizeof(float));
-	for (i = 0; i < average_box_filter_len; ++i)
-	{
-		average_box_filter[i] = (float)1.0 / (float)(average_box_filter_len);
-	}
-
-	out_im = lpgm_filter_image(im, average_box_filter, average_box_filter_len);
-
-	free(average_box_filter);
-	return out_im;
-}
-
-void
-lpgm_print_image_pixels(const lpgm_image_t* im)
-{
-	int x, y;
-	float val;
-
-	for (x = 0; x < im->h; ++x)
-	{
-		for (y = 0; y < im->w; ++y)
-		{
-			val = lpgm_get_pixel_value(im, x, y);
-			fprintf(stdout, "%s(): (row, col), (x, y): [(%d, %d) %.1f] \n", __func__, x, y, val);
-		}
-	}
 }

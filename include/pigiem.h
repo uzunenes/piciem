@@ -76,6 +76,8 @@ extern "C"
 
 	lpgm_status_t lpgm_circshift(const lpgm_signal_t* input_signal, int xdim, int ydim, lpgm_signal_t* out_signal, int xshift, int yshift);
 
+	lpgm_status_t lpgm_zero_padding_signal(const lpgm_signal_t* input_signal, int xdim, int ydim, lpgm_signal_t* out_signal, int newxdim, int newydim);
+
 	lpgm_status_t lpgm_print_signal(const lpgm_signal_t* signal, int rows, int cols);
 
 #ifdef __cplusplus

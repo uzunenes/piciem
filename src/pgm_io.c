@@ -4,26 +4,53 @@
 #include <stdlib.h>
 #include <string.h>
 
+enum lpgm_e_file_formats
+{
+	lpgm_e_file_formats_P2_ascii,
+	lpgm_e_file_formats_P5_binary
+};
+
+static enum lpgm_e_file_formats g_pgm_file_format_flag;
+
+static void
+go_new_line(FILE* file_ptr)
+{
+	char c;
+
+	while (1)
+	{
+		c = getc(file_ptr);
+		if (c == '\n')
+		{
+			break;
+		}
+	}
+}
+
 static int
 read_magic_number(FILE* file_ptr, lpgm_t* pgm)
 {
-	const char* default_read_type = "P5";
-
 	pgm->magic_number[0] = fgetc(file_ptr);
 	pgm->magic_number[1] = fgetc(file_ptr);
-	if (fgetc(file_ptr) != '\n') // end line magic number
-	{
-		fprintf(stderr, "%s(): Magic number len must be 2 character. \n", __func__);
-		return -1;
-	}
 	pgm->magic_number[2] = '\0';
 
-	if (strcmp(pgm->magic_number, default_read_type) != 0)
+	if (strcmp(pgm->magic_number, "P5") == 0)
 	{
-		fprintf(stderr, "%s(): Your image type: [%s], type must be: [%s]. \n", __func__, pgm->magic_number, default_read_type);
+		g_pgm_file_format_flag = lpgm_e_file_formats_P5_binary;
+	}
+	else if (strcmp(pgm->magic_number, "P2") == 0)
+	{
+		g_pgm_file_format_flag = lpgm_e_file_formats_P2_ascii;
+	}
+	else
+	{
+		fprintf(stderr, "%s(): Your image type: [%s], type must be: [%s] or [%s]. \n", __func__, pgm->magic_number, "P5", "P2");
 		return -1;
 	}
+
 	fprintf(stdout, "%s(): Magic number: [%s]. \n", __func__, pgm->magic_number);
+
+	go_new_line(file_ptr);
 
 	return 0;
 }
@@ -32,47 +59,45 @@ static int
 read_comments(FILE* file_ptr, lpgm_t* pgm)
 {
 	char c;
-	int comment_array_location, start_line_flag;
+	int i, start_line_flag;
 
 	pgm->comment = NULL;
-	comment_array_location = 0;
+	i = 0;
 	start_line_flag = 1;
 	while (1)
 	{
 		c = fgetc(file_ptr);
 
-		if (start_line_flag == 1 && c != '#') // end comments || no comments
+		if (start_line_flag == 1 && c == '#') // start read comment line
 		{
-			if (comment_array_location > 0)
+			start_line_flag = 0;
+		}
+		else if (start_line_flag == 1 && c != '#') // end comments || no comments
+		{
+			if (i > 0)
 			{
-				pgm->comment[comment_array_location - 1] = '\0'; // delete ','
+				pgm->comment[i - 1] = '\0'; // delete ' '
 			}
-			fseek(file_ptr, -1L, SEEK_CUR);
+			fseek(file_ptr, -1L, SEEK_CUR); // -1 back, go start
 			break;
 		}
-
-		if (c == '\n') // new line
+		else if (start_line_flag == 0 && c == '\n') // new line
 		{
 			start_line_flag = 1;
 
-			pgm->comment = realloc(pgm->comment, (comment_array_location + 1) * sizeof(char));
-			pgm->comment[comment_array_location++] = ',';
-
-			continue;
+			pgm->comment = realloc(pgm->comment, (i + 1) * sizeof(char));
+			pgm->comment[i] = ' ';
+			++i;
 		}
-		else
+		else if (start_line_flag == 0 && c != '\n') // store comments
 		{
-			if (start_line_flag == 1)
-			{
-				start_line_flag = 0;
-			}
+			pgm->comment = realloc(pgm->comment, (i + 1) * sizeof(char));
+			pgm->comment[i] = c;
+			++i;
 		}
-
-		pgm->comment = realloc(pgm->comment, (comment_array_location + 1) * sizeof(char));
-		pgm->comment[comment_array_location++] = c;
 	}
 
-	if (pgm->comment != NULL)
+	if (i > 0)
 	{
 		fprintf(stdout, "%s(): Comment: [%s]. \n", __func__, pgm->comment);
 	}
@@ -150,25 +175,29 @@ read_max_pixel_value(FILE* file_ptr, lpgm_t* pgm)
 static int
 read_pixel_data(FILE* file_ptr, lpgm_t* pgm)
 {
-	int len;
-	float* data;
+	int i;
 
 	pgm->im.data = (float*)calloc(pgm->im.w * pgm->im.h, sizeof(float));
 
-	data = pgm->im.data;
-	len = 0;
+	i = 0;
 	while (1)
 	{
-		*data = (float)fgetc(file_ptr);
-		++data;
-		++len;
+		if (g_pgm_file_format_flag == lpgm_e_file_formats_P2_ascii)
+		{
+			fscanf(file_ptr, "%f", &pgm->im.data[i]);
+		}
+		else if (g_pgm_file_format_flag == lpgm_e_file_formats_P5_binary)
+		{
+			pgm->im.data[i] = (float)fgetc(file_ptr);
+		}
+		++i;
 
 		if (feof(file_ptr))
 		{
 			break;
 		}
 	}
-	fprintf(stdout, "%s(): Readed [%d] pixels from file. \n", __func__, len);
+	fprintf(stdout, "%s(): Readed [%d] pixels from file. \n", __func__, i);
 
 	return 0;
 }
@@ -178,8 +207,7 @@ lpgm_file_read(const char* file_name, lpgm_t* pgm)
 {
 	FILE* file_ptr;
 
-	// open file read and binary mode
-	file_ptr = fopen(file_name, "rb");
+	file_ptr = fopen(file_name, "r");
 	if (file_ptr == NULL)
 	{
 		fprintf(stderr, "%s(): Error opening file: [%s]. \n", __func__, file_name);
@@ -228,25 +256,23 @@ lpgm_file_read(const char* file_name, lpgm_t* pgm)
 }
 
 /*
- * write pgm struct data to file (P5 binary format)
+ * write pgm struct data to file
  */
 lpgm_status_t
 lpgm_file_write(const lpgm_t* pgm, const char* file_name)
 {
 	FILE* file_ptr;
-	unsigned char c;
-	int i;
-	const char* default_read_type = "P5";
+	int i, j;
 
-	// check type
-	if (strcmp(pgm->magic_number, default_read_type) != 0)
+	if (g_pgm_file_format_flag == lpgm_e_file_formats_P5_binary)
 	{
-		fprintf(stderr, "%s(): Image magic number: [%s] not supporting, type must be: [%s] format. \n", __func__, pgm->magic_number, default_read_type);
-		return LPGM_FAIL;
+		file_ptr = fopen(file_name, "wb");
+	}
+	else if (g_pgm_file_format_flag == lpgm_e_file_formats_P2_ascii)
+	{
+		file_ptr = fopen(file_name, "w");
 	}
 
-	// open file write and binary mode
-	file_ptr = fopen(file_name, "wb");
 	if (file_ptr == NULL)
 	{
 		fprintf(stderr, "%s(): Error opening file: [%s]. \n", __func__, file_name);
@@ -264,10 +290,23 @@ lpgm_file_write(const lpgm_t* pgm, const char* file_name)
 	}
 
 	// write image data
-	for (i = 0; i < (pgm->im.h * pgm->im.w); ++i)
+	for (i = 0; i < pgm->im.h; ++i)
 	{
-		c = (unsigned char)pgm->im.data[i];
-		fputc(c, file_ptr);
+		for (j = 0; j < pgm->im.w; ++j)
+		{
+			if (g_pgm_file_format_flag == lpgm_e_file_formats_P5_binary)
+			{
+				fputc((unsigned char)pgm->im.data[i * pgm->im.h + j], file_ptr);
+			}
+			else if (g_pgm_file_format_flag == lpgm_e_file_formats_P2_ascii)
+			{
+				fprintf(file_ptr, "%d ", (int)pgm->im.data[i * pgm->im.h + j]);
+			}
+		}
+		if (g_pgm_file_format_flag == lpgm_e_file_formats_P2_ascii)
+		{
+			fprintf(file_ptr, "%c", '\n');
+		}
 	}
 
 	// close file

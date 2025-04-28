@@ -1,9 +1,8 @@
 ## Piciem: Image Processing Software Library
 
-**Piciem** is a lightweight image processing library written in C, designed for educational purposes and basic image manipulation tasks. It relies solely on the C standard library, making it highly portable and easy to understand for beginners and educators.
+**Piciem** is a lightweight image processing library written in C, designed for educational purposes and basic image manipulation tasks. It relies solely on the C standard library, making it portable and easy to understand for beginners.
 
-Piciem aims to provide a simple and accessible resource for learning image processing concepts while demonstrating how to build efficient software without external dependencies.  
-It is ideal for those who want to deepen their understanding of C programming and fundamental image processing algorithms.
+Piciem serves as a simple resource for learning image processing concepts and building efficient software without external dependencies, ideal for those looking to deepen their understanding of C programming and fundamental image processing algorithms.
 
 ## Key Features
 

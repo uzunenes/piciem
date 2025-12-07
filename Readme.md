@@ -2,17 +2,13 @@
 
 **Pure C Image Processing Library - Learn from Scratch**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Language: C](https://img.shields.io/badge/Language-C-blue.svg)]()
-[![Dependencies: None](https://img.shields.io/badge/Dependencies-None-green.svg)]()
-
 A lightweight, educational image processing library in pure C with **zero external dependencies**. Perfect for learning DFT/FFT, convolution, edge detection, morphology, and frequency domain filtering from scratch.
 
 **Why Piciem?**
-- 🎓 **Educational** - Clean, readable code with examples
-- 🚀 **Lightweight** - No OpenCV, no NumPy, just standard C library
-- 💡 **Learn by doing** - Build algorithms, don't just use them
-- 🔧 **Embedded-friendly** - Small footprint, easy to port
+- **Educational** - Clean, readable code with examples
+- **Lightweight** - No OpenCV, no NumPy, just standard C library
+- **Learn by doing** - Build algorithms, don't just use them
+- **Embedded-friendly** - Small footprint, easy to port
 
 ## Examples
 
@@ -49,7 +45,13 @@ A lightweight, educational image processing library in pure C with **zero extern
 
 | Input | Output |
 |:---:|:---:|
-| <img src="docs/images/homomorphic_input.png" width="250"/> | <img src="docs/images/output_homomorphic.png" width="250"/> |
+| <img src="docs/images/homomorphic_input1.png" width="250"/> | <img src="docs/images/homomorphic_output1.png" width="250"/> |
+
+| Input | Output |
+|:---:|:---:|
+| <img src="docs/images/homomorphic_input2.png" width="250"/> | <img src="docs/images/homomorphic_output2.png" width="250"/> |
+
+*Parameters: D0=30, γL=0.8, γH=1.5, n=2*
 
 ### Filters & Noise
 
@@ -187,7 +189,7 @@ Contributions are welcome! Feel free to open issues or submit pull requests.
 
 ## Support
 
-If you find this library useful for learning image processing, please consider giving it a ⭐ star!
+If you find this library useful for learning image processing, please consider giving it a star!
 
 ## License
 

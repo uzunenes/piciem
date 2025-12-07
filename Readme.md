@@ -1,6 +1,18 @@
 # Piciem
 
-Image processing library in C. No external dependencies, only standard library.
+**Pure C Image Processing Library - Learn from Scratch**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Language: C](https://img.shields.io/badge/Language-C-blue.svg)]()
+[![Dependencies: None](https://img.shields.io/badge/Dependencies-None-green.svg)]()
+
+A lightweight, educational image processing library in pure C with **zero external dependencies**. Perfect for learning DFT/FFT, convolution, edge detection, morphology, and frequency domain filtering from scratch.
+
+**Why Piciem?**
+- 🎓 **Educational** - Clean, readable code with examples
+- 🚀 **Lightweight** - No OpenCV, no NumPy, just standard C library
+- 💡 **Learn by doing** - Build algorithms, don't just use them
+- 🔧 **Embedded-friendly** - Small footprint, easy to port
 
 ## Examples
 
@@ -166,6 +178,16 @@ int main(void)
 ```bash
 gcc -o example example.c -lpigiem -lm
 ```
+
+---
+
+## Contributing
+
+Contributions are welcome! Feel free to open issues or submit pull requests.
+
+## Support
+
+If you find this library useful for learning image processing, please consider giving it a ⭐ star!
 
 ## License
 

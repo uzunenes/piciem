@@ -47,9 +47,9 @@ Image processing library in C. No external dependencies, only standard library.
 
 ### Frequency Filters
 
-| Original | Low Pass (Butterworth) |
-|:---:|:---:|
-| <img src="docs/images/lena_original.png" width="250"/> | <img src="docs/images/output_lowpass.png" width="250"/> |
+| Original | Noisy (5% salt & pepper) | Low Pass (Butterworth) |
+|:---:|:---:|:---:|
+| <img src="docs/images/lena_original.png" width="200"/> | <img src="docs/images/output_freq_noisy.png" width="200"/> | <img src="docs/images/output_lowpass.png" width="200"/> |
 
 ### Morphology
 

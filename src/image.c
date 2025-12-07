@@ -896,3 +896,175 @@ lpgm_gamma(const lpgm_image_t* im, float gamma)
 	return out_im;
 }
 
+
+/*
+ * ============================================================================
+ * Morphological Operations
+ * Binary/grayscale image operations using square structuring element
+ * ============================================================================
+ */
+
+/*
+ * Erosion - shrinks white regions, removes small white spots
+ * Output pixel = minimum value in NxN neighborhood
+ */
+lpgm_image_t
+lpgm_erode(const lpgm_image_t* im, int ksize)
+{
+	int x, y, i, j;
+	int half;
+	float min_val, pixel;
+	lpgm_image_t out_im;
+	
+	if (im == NULL || im->data == NULL)
+	{
+		out_im.w = 0;
+		out_im.h = 0;
+		out_im.data = NULL;
+		return out_im;
+	}
+	
+	if (ksize < 1 || ksize % 2 == 0)
+	{
+		fprintf(stderr, "%s(): Kernel size must be odd.\n", __func__);
+		out_im.w = 0;
+		out_im.h = 0;
+		out_im.data = NULL;
+		return out_im;
+	}
+	
+	half = ksize / 2;
+	out_im = lpgm_make_empty_image(im->w, im->h);
+	if (out_im.data == NULL)
+	{
+		return out_im;
+	}
+	
+	for (x = 0; x < im->h; ++x)
+	{
+		for (y = 0; y < im->w; ++y)
+		{
+			min_val = 255.0f;
+			
+			for (i = -half; i <= half; ++i)
+			{
+				for (j = -half; j <= half; ++j)
+				{
+					pixel = lpgm_get_pixel_extend_value(im, x + i, y + j);
+					if (pixel < min_val)
+					{
+						min_val = pixel;
+					}
+				}
+			}
+			
+			lpgm_set_pixel_value(&out_im, x, y, min_val);
+		}
+	}
+	
+	return out_im;
+}
+
+/*
+ * Dilation - expands white regions, fills small black holes
+ * Output pixel = maximum value in NxN neighborhood
+ */
+lpgm_image_t
+lpgm_dilate(const lpgm_image_t* im, int ksize)
+{
+	int x, y, i, j;
+	int half;
+	float max_val, pixel;
+	lpgm_image_t out_im;
+	
+	if (im == NULL || im->data == NULL)
+	{
+		out_im.w = 0;
+		out_im.h = 0;
+		out_im.data = NULL;
+		return out_im;
+	}
+	
+	if (ksize < 1 || ksize % 2 == 0)
+	{
+		fprintf(stderr, "%s(): Kernel size must be odd.\n", __func__);
+		out_im.w = 0;
+		out_im.h = 0;
+		out_im.data = NULL;
+		return out_im;
+	}
+	
+	half = ksize / 2;
+	out_im = lpgm_make_empty_image(im->w, im->h);
+	if (out_im.data == NULL)
+	{
+		return out_im;
+	}
+	
+	for (x = 0; x < im->h; ++x)
+	{
+		for (y = 0; y < im->w; ++y)
+		{
+			max_val = 0.0f;
+			
+			for (i = -half; i <= half; ++i)
+			{
+				for (j = -half; j <= half; ++j)
+				{
+					pixel = lpgm_get_pixel_extend_value(im, x + i, y + j);
+					if (pixel > max_val)
+					{
+						max_val = pixel;
+					}
+				}
+			}
+			
+			lpgm_set_pixel_value(&out_im, x, y, max_val);
+		}
+	}
+	
+	return out_im;
+}
+
+/*
+ * Opening - erosion followed by dilation
+ * Removes small white spots, smooths contours
+ */
+lpgm_image_t
+lpgm_opening(const lpgm_image_t* im, int ksize)
+{
+	lpgm_image_t eroded, opened;
+	
+	eroded = lpgm_erode(im, ksize);
+	if (eroded.data == NULL)
+	{
+		return eroded;
+	}
+	
+	opened = lpgm_dilate(&eroded, ksize);
+	lpgm_image_destroy(&eroded);
+	
+	return opened;
+}
+
+/*
+ * Closing - dilation followed by erosion
+ * Fills small black holes, connects nearby regions
+ */
+lpgm_image_t
+lpgm_closing(const lpgm_image_t* im, int ksize)
+{
+	lpgm_image_t dilated, closed;
+	
+	dilated = lpgm_dilate(im, ksize);
+	if (dilated.data == NULL)
+	{
+		return dilated;
+	}
+	
+	closed = lpgm_erode(&dilated, ksize);
+	lpgm_image_destroy(&dilated);
+	
+	return closed;
+}
+

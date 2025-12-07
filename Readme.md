@@ -45,6 +45,22 @@ Image processing library in C. No external dependencies, only standard library.
 |:---:|:---:|:---:|:---:|
 | <img src="docs/images/lena_original.png" width="150"/> | <img src="docs/images/output_gaussian.png" width="150"/> | <img src="docs/images/output_noisy.png" width="150"/> | <img src="docs/images/output_denoised.png" width="150"/> |
 
+### Frequency Filters
+
+| Original | Low Pass (Butterworth) |
+|:---:|:---:|
+| <img src="docs/images/lena_original.png" width="250"/> | <img src="docs/images/output_lowpass.png" width="250"/> |
+
+### Morphology
+
+| Binary | Eroded | Dilated |
+|:---:|:---:|:---:|
+| <img src="docs/images/output_binary.png" width="180"/> | <img src="docs/images/output_eroded.png" width="180"/> | <img src="docs/images/output_dilated.png" width="180"/> |
+
+| Opening | Closing |
+|:---:|:---:|
+| <img src="docs/images/output_opening.png" width="250"/> | <img src="docs/images/output_closing.png" width="250"/> |
+
 ## Functions
 
 ### I/O
@@ -71,6 +87,15 @@ Image processing library in C. No external dependencies, only standard library.
 ### Frequency Domain
 - `lpgm_dft()` / `lpgm_dft2()` - DFT, O(n²)
 - `lpgm_fft()` / `lpgm_fft2()` - FFT, O(n log n)
+- `lpgm_filter_ideal_lowpass/highpass()` - Ideal filter
+- `lpgm_filter_butterworth_lowpass/highpass()` - Butterworth filter
+- `lpgm_filter_gaussian_lowpass/highpass()` - Gaussian filter
+
+### Morphology
+- `lpgm_erode()` - Erosion
+- `lpgm_dilate()` - Dilation
+- `lpgm_opening()` - Opening (erosion + dilation)
+- `lpgm_closing()` - Closing (dilation + erosion)
 
 ## Build
 
@@ -108,6 +133,8 @@ piciem/
 │   ├── histogram/
 │   ├── edge_detection/
 │   ├── frequency_domain/
+│   ├── frequency_filters/
+│   ├── morphology/
 │   └── homomorphic_filtering/
 └── docs/images/
 ```

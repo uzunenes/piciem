@@ -238,6 +238,79 @@ extern "C"
 	 */
 	lpgm_status_t lpgm_fft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* out_signal, int inverse);
 
+	/* ========================================================================
+	 * Frequency Domain Filters (fft.c)
+	 * Apply in frequency domain after FFT, before inverse FFT
+	 * ======================================================================== */
+
+	/* 
+	 * Ideal Low Pass Filter
+	 * H(u,v) = 1 if D(u,v) <= cutoff, 0 otherwise
+	 * D(u,v) = distance from center
+	 */
+	void lpgm_filter_ideal_lowpass(lpgm_signal_t* signal, int rows, int cols, float cutoff);
+
+	/* 
+	 * Ideal High Pass Filter
+	 * H(u,v) = 0 if D(u,v) <= cutoff, 1 otherwise
+	 */
+	void lpgm_filter_ideal_highpass(lpgm_signal_t* signal, int rows, int cols, float cutoff);
+
+	/* 
+	 * Butterworth Low Pass Filter
+	 * H(u,v) = 1 / (1 + (D(u,v)/cutoff)^(2*order))
+	 * Smoother transition than ideal filter
+	 */
+	void lpgm_filter_butterworth_lowpass(lpgm_signal_t* signal, int rows, int cols, float cutoff, int order);
+
+	/* 
+	 * Butterworth High Pass Filter
+	 * H(u,v) = 1 / (1 + (cutoff/D(u,v))^(2*order))
+	 */
+	void lpgm_filter_butterworth_highpass(lpgm_signal_t* signal, int rows, int cols, float cutoff, int order);
+
+	/* 
+	 * Gaussian Low Pass Filter
+	 * H(u,v) = e^(-D(u,v)^2 / (2*sigma^2))
+	 * No ringing artifacts
+	 */
+	void lpgm_filter_gaussian_lowpass(lpgm_signal_t* signal, int rows, int cols, float sigma);
+
+	/* 
+	 * Gaussian High Pass Filter
+	 * H(u,v) = 1 - e^(-D(u,v)^2 / (2*sigma^2))
+	 */
+	void lpgm_filter_gaussian_highpass(lpgm_signal_t* signal, int rows, int cols, float sigma);
+
+	/* ========================================================================
+	 * Morphological Operations (image.c)
+	 * Binary image operations using structuring element
+	 * ======================================================================== */
+
+	/* 
+	 * Erosion - shrinks white regions
+	 * Minimum value in neighborhood
+	 */
+	lpgm_image_t lpgm_erode(const lpgm_image_t* im, int ksize);
+
+	/* 
+	 * Dilation - expands white regions
+	 * Maximum value in neighborhood
+	 */
+	lpgm_image_t lpgm_dilate(const lpgm_image_t* im, int ksize);
+
+	/* 
+	 * Opening - erosion followed by dilation
+	 * Removes small white spots
+	 */
+	lpgm_image_t lpgm_opening(const lpgm_image_t* im, int ksize);
+
+	/* 
+	 * Closing - dilation followed by erosion
+	 * Fills small black holes
+	 */
+	lpgm_image_t lpgm_closing(const lpgm_image_t* im, int ksize);
+
 #ifdef __cplusplus
 }
 #endif

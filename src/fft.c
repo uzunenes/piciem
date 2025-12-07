@@ -294,3 +294,159 @@ lpgm_fft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* 
 	
 	return LPGM_OK;
 }
+
+
+/*
+ * ============================================================================
+ * Frequency Domain Filters
+ * Apply after FFT (centered spectrum), before inverse FFT
+ * ============================================================================
+ */
+
+/* Distance from center of frequency domain */
+static float
+distance_from_center(int u, int v, int rows, int cols)
+{
+	float du = (float)u - rows / 2.0f;
+	float dv = (float)v - cols / 2.0f;
+	return sqrtf(du * du + dv * dv);
+}
+
+/*
+ * Ideal Low Pass Filter
+ * H(u,v) = 1 if D(u,v) <= cutoff, 0 otherwise
+ */
+void
+lpgm_filter_ideal_lowpass(lpgm_signal_t* signal, int rows, int cols, float cutoff)
+{
+	int u, v;
+	float d;
+	
+	for (u = 0; u < rows; ++u)
+	{
+		for (v = 0; v < cols; ++v)
+		{
+			d = distance_from_center(u, v, rows, cols);
+			if (d > cutoff)
+			{
+				signal[u * cols + v].real = 0.0f;
+				signal[u * cols + v].imaginary = 0.0f;
+			}
+		}
+	}
+}
+
+/*
+ * Ideal High Pass Filter
+ * H(u,v) = 0 if D(u,v) <= cutoff, 1 otherwise
+ */
+void
+lpgm_filter_ideal_highpass(lpgm_signal_t* signal, int rows, int cols, float cutoff)
+{
+	int u, v;
+	float d;
+	
+	for (u = 0; u < rows; ++u)
+	{
+		for (v = 0; v < cols; ++v)
+		{
+			d = distance_from_center(u, v, rows, cols);
+			if (d <= cutoff)
+			{
+				signal[u * cols + v].real = 0.0f;
+				signal[u * cols + v].imaginary = 0.0f;
+			}
+		}
+	}
+}
+
+/*
+ * Butterworth Low Pass Filter
+ * H(u,v) = 1 / (1 + (D(u,v)/cutoff)^(2*order))
+ */
+void
+lpgm_filter_butterworth_lowpass(lpgm_signal_t* signal, int rows, int cols, float cutoff, int order)
+{
+	int u, v;
+	float d, h;
+	
+	for (u = 0; u < rows; ++u)
+	{
+		for (v = 0; v < cols; ++v)
+		{
+			d = distance_from_center(u, v, rows, cols);
+			h = 1.0f / (1.0f + powf(d / cutoff, 2.0f * order));
+			signal[u * cols + v].real *= h;
+			signal[u * cols + v].imaginary *= h;
+		}
+	}
+}
+
+/*
+ * Butterworth High Pass Filter
+ * H(u,v) = 1 / (1 + (cutoff/D(u,v))^(2*order))
+ */
+void
+lpgm_filter_butterworth_highpass(lpgm_signal_t* signal, int rows, int cols, float cutoff, int order)
+{
+	int u, v;
+	float d, h;
+	
+	for (u = 0; u < rows; ++u)
+	{
+		for (v = 0; v < cols; ++v)
+		{
+			d = distance_from_center(u, v, rows, cols);
+			if (d < 0.0001f) d = 0.0001f; /* Avoid division by zero */
+			h = 1.0f / (1.0f + powf(cutoff / d, 2.0f * order));
+			signal[u * cols + v].real *= h;
+			signal[u * cols + v].imaginary *= h;
+		}
+	}
+}
+
+/*
+ * Gaussian Low Pass Filter
+ * H(u,v) = e^(-D(u,v)^2 / (2*sigma^2))
+ */
+void
+lpgm_filter_gaussian_lowpass(lpgm_signal_t* signal, int rows, int cols, float sigma)
+{
+	int u, v;
+	float d, h;
+	float sigma2 = 2.0f * sigma * sigma;
+	
+	for (u = 0; u < rows; ++u)
+	{
+		for (v = 0; v < cols; ++v)
+		{
+			d = distance_from_center(u, v, rows, cols);
+			h = expf(-(d * d) / sigma2);
+			signal[u * cols + v].real *= h;
+			signal[u * cols + v].imaginary *= h;
+		}
+	}
+}
+
+/*
+ * Gaussian High Pass Filter
+ * H(u,v) = 1 - e^(-D(u,v)^2 / (2*sigma^2))
+ */
+void
+lpgm_filter_gaussian_highpass(lpgm_signal_t* signal, int rows, int cols, float sigma)
+{
+	int u, v;
+	float d, h;
+	float sigma2 = 2.0f * sigma * sigma;
+	
+	for (u = 0; u < rows; ++u)
+	{
+		for (v = 0; v < cols; ++v)
+		{
+			d = distance_from_center(u, v, rows, cols);
+			h = 1.0f - expf(-(d * d) / sigma2);
+			signal[u * cols + v].real *= h;
+			signal[u * cols + v].imaginary *= h;
+		}
+	}
+}

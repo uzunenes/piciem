@@ -19,8 +19,8 @@ change_image_block_pixel_value(lpgm_t* pgm, struct block_s block, float new_valu
 	int i, j, rows, cols;
 	float* data_ptr;
 
-	rows = pgm->im.w;
-	cols = pgm->im.h;
+	rows = pgm->im.h;
+	cols = pgm->im.w;
 	data_ptr = pgm->im.data;
 
 	for (i = 0; i < rows; ++i)

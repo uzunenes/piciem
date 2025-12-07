@@ -15,12 +15,12 @@ static enum lpgm_e_file_formats g_pgm_file_format_flag;
 static void
 go_new_line(FILE* file_ptr)
 {
-	char c;
+	int c;
 
 	while (1)
 	{
 		c = getc(file_ptr);
-		if (c == '\n')
+		if (c == '\n' || c == EOF)
 		{
 			break;
 		}
@@ -30,8 +30,17 @@ go_new_line(FILE* file_ptr)
 static int
 read_magic_number(FILE* file_ptr, lpgm_t* pgm)
 {
-	pgm->magic_number[0] = fgetc(file_ptr);
-	pgm->magic_number[1] = fgetc(file_ptr);
+	int c1, c2;
+
+	c1 = fgetc(file_ptr);
+	c2 = fgetc(file_ptr);
+	if (c1 == EOF || c2 == EOF)
+	{
+		fprintf(stderr, "%s(): Unexpected end of file.\n", __func__);
+		return -1;
+	}
+	pgm->magic_number[0] = (char)c1;
+	pgm->magic_number[1] = (char)c2;
 	pgm->magic_number[2] = '\0';
 
 	if (strcmp(pgm->magic_number, "P5") == 0)
@@ -58,7 +67,7 @@ read_magic_number(FILE* file_ptr, lpgm_t* pgm)
 static int
 read_comments(FILE* file_ptr, lpgm_t* pgm)
 {
-	char c;
+	int c;
 	int i, start_line_flag;
 
 	pgm->comment = NULL;
@@ -67,6 +76,10 @@ read_comments(FILE* file_ptr, lpgm_t* pgm)
 	while (1)
 	{
 		c = fgetc(file_ptr);
+		if (c == EOF)
+		{
+			break;
+		}
 
 		if (start_line_flag == 1 && c == '#') // start read comment line
 		{
@@ -108,7 +121,7 @@ read_comments(FILE* file_ptr, lpgm_t* pgm)
 static int
 read_height_and_weight(FILE* file_ptr, lpgm_t* pgm)
 {
-	char c;
+	int c;
 	char buffer[64];
 	int array_location;
 
@@ -116,6 +129,11 @@ read_height_and_weight(FILE* file_ptr, lpgm_t* pgm)
 	while (1)
 	{
 		c = fgetc(file_ptr);
+		if (c == EOF)
+		{
+			fprintf(stderr, "%s(): Unexpected end of file.\n", __func__);
+			return -1;
+		}
 
 		if (c == '\n') // end
 		{
@@ -130,8 +148,11 @@ read_height_and_weight(FILE* file_ptr, lpgm_t* pgm)
 			array_location = 0;
 		}
 
-		buffer[array_location] = c;
-		++array_location;
+		if (array_location < 63)
+		{
+			buffer[array_location] = (char)c;
+			++array_location;
+		}
 	}
 	fprintf(stdout, "%s(): Height: [%d] , weight: [%d]. \n", __func__, pgm->im.h, pgm->im.w);
 
@@ -141,7 +162,7 @@ read_height_and_weight(FILE* file_ptr, lpgm_t* pgm)
 static int
 read_max_pixel_value(FILE* file_ptr, lpgm_t* pgm)
 {
-	char c;
+	int c;
 	int array_location;
 	char buffer[64];
 	const int max_value_L = 255;
@@ -150,6 +171,11 @@ read_max_pixel_value(FILE* file_ptr, lpgm_t* pgm)
 	while (1)
 	{
 		c = fgetc(file_ptr);
+		if (c == EOF)
+		{
+			fprintf(stderr, "%s(): Unexpected end of file.\n", __func__);
+			return -1;
+		}
 
 		if (c == '\n') // end
 		{
@@ -158,8 +184,11 @@ read_max_pixel_value(FILE* file_ptr, lpgm_t* pgm)
 			break;
 		}
 
-		buffer[array_location] = c;
-		++array_location;
+		if (array_location < 63)
+		{
+			buffer[array_location] = (char)c;
+			++array_location;
+		}
 	}
 
 	if (pgm->max_val != max_value_L)
@@ -178,13 +207,21 @@ read_pixel_data(FILE* file_ptr, lpgm_t* pgm)
 	int i;
 
 	pgm->im.data = (float*)calloc(pgm->im.w * pgm->im.h, sizeof(float));
+	if (pgm->im.data == NULL)
+	{
+		fprintf(stderr, "%s(): Memory allocation failed.\n", __func__);
+		return -1;
+	}
 
 	i = 0;
 	while (1)
 	{
 		if (g_pgm_file_format_flag == lpgm_e_file_formats_P2_ascii)
 		{
-			fscanf(file_ptr, "%f", &pgm->im.data[i]);
+			if (fscanf(file_ptr, "%f", &pgm->im.data[i]) != 1)
+			{
+				break;
+			}
 		}
 		else if (g_pgm_file_format_flag == lpgm_e_file_formats_P5_binary)
 		{
@@ -261,7 +298,7 @@ lpgm_file_read(const char* file_name, lpgm_t* pgm)
 lpgm_status_t
 lpgm_file_write(const lpgm_t* pgm, const char* file_name)
 {
-	FILE* file_ptr;
+	FILE* file_ptr = NULL;
 	int i, j;
 
 	if (g_pgm_file_format_flag == lpgm_e_file_formats_P5_binary)
@@ -296,11 +333,11 @@ lpgm_file_write(const lpgm_t* pgm, const char* file_name)
 		{
 			if (g_pgm_file_format_flag == lpgm_e_file_formats_P5_binary)
 			{
-				fputc((unsigned char)pgm->im.data[i * pgm->im.h + j], file_ptr);
+				fputc((unsigned char)pgm->im.data[i * pgm->im.w + j], file_ptr);
 			}
 			else if (g_pgm_file_format_flag == lpgm_e_file_formats_P2_ascii)
 			{
-				fprintf(file_ptr, "%d ", (int)pgm->im.data[i * pgm->im.h + j]);
+				fprintf(file_ptr, "%d ", (int)pgm->im.data[i * pgm->im.w + j]);
 			}
 		}
 		if (g_pgm_file_format_flag == lpgm_e_file_formats_P2_ascii)

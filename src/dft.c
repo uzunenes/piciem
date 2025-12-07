@@ -4,6 +4,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/*
+ * Discrete Fourier Transform (DFT)
+ * 
+ * Forward DFT formula:
+ *   X[k] = sum_{n=0}^{N-1} x[n] * e^(-j * 2 * pi * k * n / N)
+ *        = sum_{n=0}^{N-1} x[n] * (cos(2*pi*k*n/N) - j*sin(2*pi*k*n/N))
+ * 
+ * Inverse DFT formula:
+ *   x[n] = (1/N) * sum_{k=0}^{N-1} X[k] * e^(j * 2 * pi * k * n / N)
+ * 
+ * Complexity: O(N^2) for 1D, O(N^2 * M^2) for 2D
+ */
+
 lpgm_signal_t*
 lpgm_make_empty_signal(int signal_len)
 {
@@ -47,6 +60,17 @@ lpgm_image_to_signal(const lpgm_image_t* im, lpgm_signal_t* out_signal)
 	return LPGM_OK;
 }
 
+/*
+ * 1D Discrete Fourier Transform
+ * 
+ * Parameters:
+ *   input_signal - input complex signal array
+ *   signal_len   - length of the signal (N)
+ *   out_signal   - output complex signal array (must be pre-allocated)
+ *   inverse      - 0 for forward DFT, 1 for inverse DFT
+ * 
+ * Formula: X[k] = sum_{n=0}^{N-1} x[n] * e^(-j * 2 * pi * k * n / N)
+ */
 lpgm_status_t
 lpgm_dft(const lpgm_signal_t* input_signal, int signal_len, lpgm_signal_t* out_signal, int inverse)
 {
@@ -89,21 +113,48 @@ lpgm_dft(const lpgm_signal_t* input_signal, int signal_len, lpgm_signal_t* out_s
 	return LPGM_OK;
 }
 
+/*
+ * 2D Discrete Fourier Transform (separable, row-column decomposition)
+ * 
+ * Parameters:
+ *   input_signal - input 2D complex signal (rows x cols)
+ *   rows, cols   - dimensions of the signal
+ *   out_signal   - output 2D complex signal (must be pre-allocated)
+ *   inverse      - 0 for forward DFT, 1 for inverse DFT
+ * 
+ * Method: Apply 1D DFT to each row, then to each column
+ * Complexity: O(rows * cols * (rows + cols))
+ */
 lpgm_status_t
 lpgm_dft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* out_signal, int inverse)
 {
 	int i, j;
 	lpgm_signal_t* temp_signal;
-	lpgm_signal_t row_signal[cols], out_row_signal[cols], col_signal[rows], out_col_signal[rows];
+	lpgm_signal_t* row_signal;
+	lpgm_signal_t* out_row_signal;
+	lpgm_signal_t* col_signal;
+	lpgm_signal_t* out_col_signal;
 
 	if (input_signal == NULL || out_signal == NULL)
 	{
 		return LPGM_FAIL;
 	}
 
+	/* Allocate temporary buffers instead of VLAs */
 	temp_signal = lpgm_make_empty_signal(rows * cols);
-	if (temp_signal == NULL)
+	row_signal = lpgm_make_empty_signal(cols);
+	out_row_signal = lpgm_make_empty_signal(cols);
+	col_signal = lpgm_make_empty_signal(rows);
+	out_col_signal = lpgm_make_empty_signal(rows);
+
+	if (temp_signal == NULL || row_signal == NULL || out_row_signal == NULL ||
+	    col_signal == NULL || out_col_signal == NULL)
 	{
+		lpgm_destroy_signal(temp_signal);
+		lpgm_destroy_signal(row_signal);
+		lpgm_destroy_signal(out_row_signal);
+		lpgm_destroy_signal(col_signal);
+		lpgm_destroy_signal(out_col_signal);
 		return LPGM_FAIL;
 	}
 
@@ -151,10 +202,25 @@ lpgm_dft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* 
 	}
 
 	lpgm_destroy_signal(temp_signal);
+	lpgm_destroy_signal(row_signal);
+	lpgm_destroy_signal(out_row_signal);
+	lpgm_destroy_signal(col_signal);
+	lpgm_destroy_signal(out_col_signal);
 
 	return LPGM_OK;
 }
 
+/*
+ * Circular shift of a 2D signal
+ * 
+ * Parameters:
+ *   input_signal - input 2D signal
+ *   xdim, ydim   - dimensions
+ *   out_signal   - output shifted signal
+ *   xshift, yshift - shift amounts
+ * 
+ * Formula: out[ii][jj] = in[i][j] where ii = (i + xshift) % xdim
+ */
 lpgm_status_t
 lpgm_circshift(const lpgm_signal_t* input_signal, int xdim, int ydim, lpgm_signal_t* out_signal, int xshift, int yshift)
 {

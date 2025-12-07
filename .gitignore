@@ -2,5 +2,5 @@
 *.out
 *.so
 *.pc
-output.pgm
+output*.pgm
 ./obj

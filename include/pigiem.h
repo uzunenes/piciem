@@ -150,6 +150,34 @@ extern "C"
 	 */
 	lpgm_image_t lpgm_sobel(const lpgm_image_t* im);
 
+	/* 
+	 * Generic NxN convolution with zero-padding.
+	 * Formula: out[x,y] = sum_{i,j} in[x+i, y+j] * kernel[i,j]
+	 * ksize must be odd (3, 5, 7, ...).
+	 */
+	lpgm_image_t lpgm_convolve(const lpgm_image_t* im, const float* kernel, int ksize);
+
+	/* 
+	 * Median filter for noise removal.
+	 * Replaces each pixel with median of its NxN neighborhood.
+	 * ksize must be odd (3, 5, 7, ...).
+	 */
+	lpgm_image_t lpgm_median_filter(const lpgm_image_t* im, int ksize);
+
+	/* 
+	 * Add salt & pepper noise.
+	 * density: fraction of pixels to corrupt (0.0 to 1.0).
+	 * Example: density = 0.05 corrupts 5% of pixels.
+	 */
+	lpgm_image_t lpgm_add_salt_pepper_noise(const lpgm_image_t* im, float density);
+
+	/* 
+	 * Gamma correction.
+	 * Formula: out = 255 * (in / 255) ^ gamma
+	 * gamma < 1: brighter, gamma > 1: darker
+	 */
+	lpgm_image_t lpgm_gamma(const lpgm_image_t* im, float gamma);
+
 	/* ========================================================================
 	 * DFT Functions (dft.c) - O(N^2) complexity
 	 * ======================================================================== */

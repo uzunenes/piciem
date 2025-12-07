@@ -614,3 +614,285 @@ lpgm_sobel(const lpgm_image_t* im)
 	return out_im;
 }
 
+
+/*
+ * ============================================================================
+ * Generic Convolution - NxN kernel with zero-padding
+ * ============================================================================
+ * Formula: out[x,y] = sum_{i,j} in[x+i, y+j] * kernel[i,j]
+ * 
+ * Parameters:
+ *   im     - Input image
+ *   kernel - NxN kernel data (row-major order)
+ *   ksize  - Kernel size (must be odd: 3, 5, 7, ...)
+ * 
+ * Zero-padding: Pixels outside image boundaries are treated as 0.
+ * ============================================================================
+ */
+lpgm_image_t
+lpgm_convolve(const lpgm_image_t* im, const float* kernel, int ksize)
+{
+	int x, y, i, j;
+	int half;
+	float sum, pixel;
+	lpgm_image_t out_im;
+	
+	if (im == NULL || im->data == NULL || kernel == NULL)
+	{
+		out_im.w = 0;
+		out_im.h = 0;
+		out_im.data = NULL;
+		return out_im;
+	}
+	
+	/* Kernel size must be odd */
+	if (ksize < 1 || ksize % 2 == 0)
+	{
+		fprintf(stderr, "%s(): Kernel size must be odd (3, 5, 7, ...).\n", __func__);
+		out_im.w = 0;
+		out_im.h = 0;
+		out_im.data = NULL;
+		return out_im;
+	}
+	
+	half = ksize / 2;
+	out_im = lpgm_make_empty_image(im->w, im->h);
+	if (out_im.data == NULL)
+	{
+		return out_im;
+	}
+	
+	/* Apply convolution to each pixel */
+	for (x = 0; x < im->h; ++x)
+	{
+		for (y = 0; y < im->w; ++y)
+		{
+			sum = 0.0f;
+			
+			for (i = -half; i <= half; ++i)
+			{
+				for (j = -half; j <= half; ++j)
+				{
+					/* Zero-padding: lpgm_get_pixel_extend_value returns 0 for out-of-bounds */
+					pixel = lpgm_get_pixel_extend_value(im, x + i, y + j);
+					sum += pixel * kernel[(i + half) * ksize + (j + half)];
+				}
+			}
+			
+			lpgm_set_pixel_value(&out_im, x, y, lpgm_clamp(sum, 0.0f, 255.0f));
+		}
+	}
+	
+	return out_im;
+}
+
+
+/*
+ * ============================================================================
+ * Median Filter - NxN window, removes salt & pepper noise
+ * ============================================================================
+ * Algorithm: Sort pixels in window, output median value.
+ * 
+ * Parameters:
+ *   im    - Input image
+ *   ksize - Window size (must be odd: 3, 5, 7, ...)
+ * 
+ * Zero-padding: Pixels outside image boundaries are treated as 0.
+ * ============================================================================
+ */
+lpgm_image_t
+lpgm_median_filter(const lpgm_image_t* im, int ksize)
+{
+	int x, y, i, j, k, m;
+	int half, window_size, median_idx;
+	float* window;
+	float temp;
+	lpgm_image_t out_im;
+	
+	if (im == NULL || im->data == NULL)
+	{
+		out_im.w = 0;
+		out_im.h = 0;
+		out_im.data = NULL;
+		return out_im;
+	}
+	
+	/* Kernel size must be odd */
+	if (ksize < 1 || ksize % 2 == 0)
+	{
+		fprintf(stderr, "%s(): Kernel size must be odd (3, 5, 7, ...).\n", __func__);
+		out_im.w = 0;
+		out_im.h = 0;
+		out_im.data = NULL;
+		return out_im;
+	}
+	
+	half = ksize / 2;
+	window_size = ksize * ksize;
+	median_idx = window_size / 2;
+	
+	window = (float*)malloc(window_size * sizeof(float));
+	if (window == NULL)
+	{
+		fprintf(stderr, "%s(): Memory allocation failed.\n", __func__);
+		out_im.w = 0;
+		out_im.h = 0;
+		out_im.data = NULL;
+		return out_im;
+	}
+	
+	out_im = lpgm_make_empty_image(im->w, im->h);
+	if (out_im.data == NULL)
+	{
+		free(window);
+		return out_im;
+	}
+	
+	/* Apply median filter to each pixel */
+	for (x = 0; x < im->h; ++x)
+	{
+		for (y = 0; y < im->w; ++y)
+		{
+			/* Collect pixels in window */
+			k = 0;
+			for (i = -half; i <= half; ++i)
+			{
+				for (j = -half; j <= half; ++j)
+				{
+					window[k++] = lpgm_get_pixel_extend_value(im, x + i, y + j);
+				}
+			}
+			
+			/* Insertion sort (efficient for small arrays) */
+			for (i = 1; i < window_size; ++i)
+			{
+				temp = window[i];
+				m = i - 1;
+				while (m >= 0 && window[m] > temp)
+				{
+					window[m + 1] = window[m];
+					m--;
+				}
+				window[m + 1] = temp;
+			}
+			
+			lpgm_set_pixel_value(&out_im, x, y, window[median_idx]);
+		}
+	}
+	
+	free(window);
+	return out_im;
+}
+
+
+/*
+ * ============================================================================
+ * Add Salt & Pepper Noise
+ * ============================================================================
+ * Algorithm: Randomly set pixels to 0 (pepper) or 255 (salt).
+ * 
+ * Parameters:
+ *   im      - Input image
+ *   density - Noise density (0.0 to 1.0). 0.05 = 5% noisy pixels.
+ * 
+ * Returns a new image with noise added.
+ * ============================================================================
+ */
+lpgm_image_t
+lpgm_add_salt_pepper_noise(const lpgm_image_t* im, float density)
+{
+	int total_pixels, num_noisy;
+	int i, idx;
+	float rand_val;
+	lpgm_image_t out_im;
+	
+	if (im == NULL || im->data == NULL)
+	{
+		out_im.w = 0;
+		out_im.h = 0;
+		out_im.data = NULL;
+		return out_im;
+	}
+	
+	if (density < 0.0f) density = 0.0f;
+	if (density > 1.0f) density = 1.0f;
+	
+	out_im = lpgm_copy_image(im);
+	if (out_im.data == NULL)
+	{
+		return out_im;
+	}
+	
+	total_pixels = im->w * im->h;
+	num_noisy = (int)(total_pixels * density);
+	
+	/* Add noise to random pixels */
+	for (i = 0; i < num_noisy; ++i)
+	{
+		idx = rand() % total_pixels;
+		rand_val = (rand() % 2 == 0) ? 0.0f : 255.0f;
+		out_im.data[idx] = rand_val;
+	}
+	
+	return out_im;
+}
+
+
+/*
+ * ============================================================================
+ * Gamma Correction
+ * ============================================================================
+ * Formula: out = 255 * (in / 255) ^ gamma
+ * 
+ * Parameters:
+ *   im    - Input image
+ *   gamma - Gamma value. 
+ *           gamma < 1: brighter (expands dark tones)
+ *           gamma > 1: darker (compresses dark tones)
+ *           gamma = 1: no change
+ * ============================================================================
+ */
+lpgm_image_t
+lpgm_gamma(const lpgm_image_t* im, float gamma)
+{
+	int x, y;
+	float normalized, corrected;
+	lpgm_image_t out_im;
+	
+	if (im == NULL || im->data == NULL)
+	{
+		out_im.w = 0;
+		out_im.h = 0;
+		out_im.data = NULL;
+		return out_im;
+	}
+	
+	if (gamma <= 0.0f)
+	{
+		fprintf(stderr, "%s(): Gamma must be positive.\n", __func__);
+		out_im.w = 0;
+		out_im.h = 0;
+		out_im.data = NULL;
+		return out_im;
+	}
+	
+	out_im = lpgm_make_empty_image(im->w, im->h);
+	if (out_im.data == NULL)
+	{
+		return out_im;
+	}
+	
+	for (x = 0; x < im->h; ++x)
+	{
+		for (y = 0; y < im->w; ++y)
+		{
+			/* Normalize to [0, 1], apply gamma, scale back to [0, 255] */
+			normalized = lpgm_get_pixel_value(im, x, y) / 255.0f;
+			corrected = 255.0f * powf(normalized, gamma);
+			lpgm_set_pixel_value(&out_im, x, y, lpgm_clamp(corrected, 0.0f, 255.0f));
+		}
+	}
+	
+	return out_im;
+}
+

@@ -220,15 +220,38 @@ lpgm_dft2(const lpgm_signal_t* input_signal, int rows, int cols, lpgm_signal_t* 
  *   xshift, yshift - shift amounts
  * 
  * Formula: out[ii][jj] = in[i][j] where ii = (i + xshift) % xdim
+ * 
+ * Note: Supports in-place operation (input == output) by using temp buffer
  */
 lpgm_status_t
 lpgm_circshift(const lpgm_signal_t* input_signal, int xdim, int ydim, lpgm_signal_t* out_signal, int xshift, int yshift)
 {
 	int i, j, ii, jj;
+	lpgm_signal_t* temp = NULL;
+	const lpgm_signal_t* src;
 
 	if (input_signal == NULL || out_signal == NULL)
 	{
 		return LPGM_FAIL;
+	}
+
+	/* If in-place, use temporary buffer */
+	if (input_signal == out_signal)
+	{
+		temp = lpgm_make_empty_signal(xdim * ydim);
+		if (temp == NULL)
+		{
+			return LPGM_FAIL;
+		}
+		for (i = 0; i < xdim * ydim; ++i)
+		{
+			temp[i] = input_signal[i];
+		}
+		src = temp;
+	}
+	else
+	{
+		src = input_signal;
 	}
 
 	for (i = 0; i < xdim; ++i)
@@ -249,8 +272,13 @@ lpgm_circshift(const lpgm_signal_t* input_signal, int xdim, int ydim, lpgm_signa
 				jj = ydim + jj;
 			}
 
-			out_signal[ii * ydim + jj] = input_signal[i * ydim + j];
+			out_signal[ii * ydim + jj] = src[i * ydim + j];
 		}
+	}
+
+	if (temp != NULL)
+	{
+		lpgm_destroy_signal(temp);
 	}
 
 	return LPGM_OK;

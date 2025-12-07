@@ -45,13 +45,36 @@ lpgm_next_power_of_two(int n)
  * 
  * FFT requires input to be in bit-reversed order for in-place computation.
  * Example for N=8: 0,1,2,3,4,5,6,7 -> 0,4,2,6,1,5,3,7
+ * 
+ * Note: Supports in-place operation (input == output) by using temp buffer
  */
-static void
+static int
 bit_reverse_copy(const lpgm_signal_t* input, lpgm_signal_t* output, int n)
 {
 	int i, j, k;
 	int log2n = 0;
 	int temp = n;
+	lpgm_signal_t* temp_buf = NULL;
+	const lpgm_signal_t* src;
+	
+	/* If in-place, use temporary buffer */
+	if (input == output)
+	{
+		temp_buf = lpgm_make_empty_signal(n);
+		if (temp_buf == NULL)
+		{
+			return -1;
+		}
+		for (i = 0; i < n; ++i)
+		{
+			temp_buf[i] = input[i];
+		}
+		src = temp_buf;
+	}
+	else
+	{
+		src = input;
+	}
 	
 	/* Calculate log2(n) */
 	while (temp > 1)
@@ -70,9 +93,16 @@ bit_reverse_copy(const lpgm_signal_t* input, lpgm_signal_t* output, int n)
 			j = (j << 1) | (temp & 1);
 			temp >>= 1;
 		}
-		output[j].real = input[i].real;
-		output[j].imaginary = input[i].imaginary;
+		output[j].real = src[i].real;
+		output[j].imaginary = src[i].imaginary;
 	}
+	
+	if (temp_buf != NULL)
+	{
+		lpgm_destroy_signal(temp_buf);
+	}
+	
+	return 0;
 }
 
 /*
@@ -115,8 +145,11 @@ lpgm_fft(const lpgm_signal_t* input_signal, int signal_len, lpgm_signal_t* out_s
 		return LPGM_FAIL;
 	}
 	
-	/* Bit-reversal permutation */
-	bit_reverse_copy(input_signal, out_signal, signal_len);
+	/* Bit-reversal permutation (supports in-place) */
+	if (bit_reverse_copy(input_signal, out_signal, signal_len) != 0)
+	{
+		return LPGM_FAIL;
+	}
 	
 	/* Iterative FFT (bottom-up) */
 	/* m = current transform size, starting from 2 and doubling each stage */

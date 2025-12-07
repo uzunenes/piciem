@@ -284,22 +284,61 @@ lpgm_circshift(const lpgm_signal_t* input_signal, int xdim, int ydim, lpgm_signa
 	return LPGM_OK;
 }
 
+/*
+ * Zero-pad a signal to new dimensions
+ * 
+ * Note: Supports in-place operation (input == output) by using temp buffer
+ */
 lpgm_status_t
 lpgm_zero_padding_signal(const lpgm_signal_t* input_signal, int xdim, int ydim, lpgm_signal_t* out_signal, int newxdim, int newydim)
 {
 	int i, j;
+	lpgm_signal_t* temp = NULL;
+	const lpgm_signal_t* src;
 
 	if (input_signal == NULL || out_signal == NULL || xdim > newxdim || ydim > newydim)
 	{
 		return LPGM_FAIL;
 	}
 
+	/* If in-place, use temporary buffer */
+	if (input_signal == out_signal)
+	{
+		temp = lpgm_make_empty_signal(xdim * ydim);
+		if (temp == NULL)
+		{
+			return LPGM_FAIL;
+		}
+		for (i = 0; i < xdim * ydim; ++i)
+		{
+			temp[i] = input_signal[i];
+		}
+		src = temp;
+	}
+	else
+	{
+		src = input_signal;
+	}
+
+	/* Initialize output to zero (important for padding area) */
+	for (i = 0; i < newxdim * newydim; ++i)
+	{
+		out_signal[i].real = 0.0f;
+		out_signal[i].imaginary = 0.0f;
+	}
+
+	/* Copy original data */
 	for (i = 0; i < xdim; ++i)
 	{
 		for (j = 0; j < ydim; ++j)
 		{
-			out_signal[i * newydim + j] = input_signal[i * ydim + j];
+			out_signal[i * newydim + j] = src[i * ydim + j];
 		}
+	}
+
+	if (temp != NULL)
+	{
+		lpgm_destroy_signal(temp);
 	}
 
 	return LPGM_OK;
